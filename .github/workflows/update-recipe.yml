@@ -1,0 +1,70 @@
+name: Update Recipe
+
+on:
+  workflow_dispatch:
+    inputs:
+      data:
+        description: "Recipe JSON data"
+        required: true
+        type: string
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Parse input
+        id: parse
+        run: |
+          echo '${{ github.event.inputs.data }}' > new_recipe.json
+
+      - name: Update recipe-list.json
+        run: |
+          # 既存のJSONを読み込み
+          jq -s '.[0] + [.[1]]' recipe-list.json new_recipe.json > merged.json
+          mv merged.json recipe-list.json
+
+      - name: Create recipe HTML
+        run: |
+          TITLE=$(jq -r '.title' new_recipe.json)
+          GENRE=$(jq -r '.genre' new_recipe.json)
+          SUBTITLE=$(jq -r '.subtitle' new_recipe.json)
+          IMAGE=$(jq -r '.image' new_recipe.json)
+          ING=$(jq -r '.ingredients[]' new_recipe.json | sed 's/^/<li>/;s/$/<\/li>/')
+          STEPS=$(jq -r '.steps[]' new_recipe.json | sed 's/^/<li>/;s/$/<\/li>/')
+
+          SAFE_TITLE=$(echo "$TITLE" | sed 's/[\\\/:*?"<>|]/_/g')
+          FILE="recipes/${GENRE}_${SAFE_TITLE}.html"
+
+          mkdir -p recipes
+
+          cat <<EOF > $FILE
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>${TITLE}（${GENRE}）</title>
+</head>
+<body>
+<h1>${TITLE}</h1>
+<p>${SUBTITLE}</p>
+<p>ジャンル：${GENRE}</p>
+${IMAGE:+<img src="${IMAGE}" style="max-width:300px;">}
+<h2>材料</h2>
+<ul>${ING}</ul>
+<h2>作り方</h2>
+<ol>${STEPS}</ol>
+</body>
+</html>
+EOF
+
+      - name: Commit & Push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Add recipe via Actions"
+          git push
