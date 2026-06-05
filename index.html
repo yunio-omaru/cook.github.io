@@ -549,7 +549,7 @@
       setupPreviewActions();
       loadRecipeList();
       checkEditMode();
-      setupGitHubSettings(); // GitHub設定の初期化
+      setupGitHubSettings();
     });
 
     function returnToMainMenu() {
@@ -781,7 +781,11 @@
       document.getElementById("downloadBtn").addEventListener("click", async () => {
         const recipe = await collectRecipeFromForm();
         if (!recipe) return;
-        await uploadToGitHub(recipe);
+        const success = await uploadToGitHub(recipe);
+        if (success) {
+          closeAddModal(true); 
+          returnToMainMenu();
+        }
       });
     }
 
@@ -860,14 +864,12 @@
       return title.replace(/[\\\/:*?"<>|]/g, "_").trim() || "recipe";
     }
 
-    // 💡 GitHub設定アコーディオンの開閉と保存処理
     function setupGitHubSettings() {
       const toggle = document.getElementById("ghToggle");
       const content = document.getElementById("ghContent");
       const userEl = document.getElementById("ghUser");
       const tokenEl = document.getElementById("ghToken");
 
-      // ローカルストレージから既存の設定を復元
       userEl.value = localStorage.getItem("gh_user") || "";
       tokenEl.value = localStorage.getItem("gh_token") || "";
 
@@ -881,16 +883,14 @@
         }
       });
 
-      // 入力されたら自動保存
       userEl.addEventListener("input", () => localStorage.setItem("gh_user", userEl.value.trim()));
       tokenEl.addEventListener("input", () => localStorage.setItem("gh_token", tokenEl.value.trim()));
     }
 
-    // 💡 GitHub APIを使って直接コミット（追加・上書き）する関数
     async function uploadToGitHub(recipe) {
       const user = localStorage.getItem("gh_user");
       const token = localStorage.getItem("gh_token");
-      const repo = "cook.github.io"; // リポジトリ名固定
+      const repo = "cook.github.io"; 
 
       if (!user || !token) {
         alert("GitHubのユーザー名とトークンを設定してください。\n（「GitHub自動保存の設定」から入力できます）");
@@ -902,10 +902,8 @@
       const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
       const htmlContent = buildRecipeCardHtml(recipe);
       
-      // UTF-8の文字列をBase64に安全に変換する処理
       const base64Content = btoa(unescape(encodeURIComponent(htmlContent)));
 
-      // 上書き（更新）か新規追加かを判定するため、既存ファイルのSHA（ID）があるか確認しに行く
       let sha = null;
       try {
         const res = await fetch(url, {
@@ -913,19 +911,16 @@
         });
         if (res.ok) {
           const data = await res.json();
-          sha = data.sha; // 既存ファイルがある場合はSHAを取得
+          sha = data.sha;
         }
-      } catch (e) {
-        // 新規ファイルの場合はここを通る（何もしなくてOK）
-      }
+      } catch (e) {}
 
-      // GitHubへAPI送信（コミット）
       try {
         const bodyData = {
           message: `recipe: ${sha ? 'Update' : 'Add'} ${recipe.title}`,
           content: base64Content
         };
-        if (sha) bodyData.sha = sha; // 上書きの場合は対象のSHAを載せる
+        if (sha) bodyData.sha = sha;
 
         const response = await fetch(url, {
           method: "PUT",
