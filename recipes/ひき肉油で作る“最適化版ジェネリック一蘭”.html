@@ -23,7 +23,7 @@ body {
   background: radial-gradient(circle at top left, #2a1515 0, #050505 55%, #000 100%);
   padding: 0.9rem;
   box-sizing: border-box;
-  position: relative; /* 💡 編集ボタンの基準点 */
+  position: relative;
 }
 .card-header {
   display: flex;
@@ -32,13 +32,12 @@ body {
   gap: 0.5rem;
   border-bottom: 1px dashed rgba(255,255,255,0.08);
   padding-bottom: 0.4rem;
-  padding-right: 4rem; /* 💡 編集ボタンとの重なり防止 */
+  padding-right: 4rem;
 }
 .card-title { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.06em; }
 .card-subtitle { font-size: 0.75rem; color: #aaaaaa; }
 .card-tag { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15); color: #ff7043; }
 
-/* 💡 編集ボタンのスタイル */
 .edit-btn {
   position: absolute;
   top: 0.9rem;
@@ -51,7 +50,6 @@ body {
   font-size: 0.75rem;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
-  z-index: 10;
 }
 .edit-btn:hover {
   background: #222;
@@ -73,7 +71,8 @@ body {
 </head>
 <body>
   <article class="card" data-genre="主食" data-title="ひき肉油で作る“最適化版ジェネリック一蘭”" data-subtitle="ラーメン,豚" data-tags="ラーメン, 豚">
-    <button class="edit-btn" id="editRecipeBtn">編集</button> <header class="card-header">
+    <button class="edit-btn" id="editRecipeBtn">編集</button>
+    <header class="card-header">
       <div>
         <div class="card-title">ひき肉油で作る“最適化版ジェネリック一蘭”</div>
         <div class="card-subtitle">ラーメン,豚</div>
@@ -87,49 +86,13 @@ body {
         </div>
         <div>
           <div class="section-title">材料</div>
-          <div class="ingredients" id="ingredientsList"> <ul>
-              <li>＜麺＞</li>
-              <li>マルタイラーメン（乾麺）：1玉</li>
-              <li>＜スープ1＞</li>
-              <li>醤油：大さじ1と1/2</li>
-              <li>砂糖：小さじ1/4</li>
-              <li>ハイミー：7振り</li>
-              <li>塩：1つまみ</li>
-              <li>豆乳：小さじ2</li>
-              <li>＜スープ2＞</li>
-              <li>ひき肉油（ラード代用）：大さじ1</li>
-              <li>ウェイパー：小さじ1</li>
-              <li>酒：小さじ2</li>
-              <li>ガーリックパウダー：5振り</li>
-              <li>コショウ：4振り</li>
-              <li>豚バラ液：水300cc×豚バラ（または豚こま）：30gをハンドブレンダー攪拌</li>
-              <li>乳化用追加ひき肉油：小さじ1〜2</li>
-              <li>＜秘伝のたれ＞</li>
-              <li>コチュジャン：小さじ1</li>
-              <li>一味唐辛子：小さじ1/2</li>
-              <li>味の素：1振り</li>
-              <li>コショウ（秘伝のたれ用）：2振り</li>
-              <li>ごま油：小さじ1/2</li>
-              <li>水（秘伝のたれ用）：小さじ1/3</li>
-              <li>＜薬味＞</li>
-              <li>ネギ</li>
-            </ul>
-          </div>
+          <div class="ingredients"><ul><li>＜麺＞</li><li>マルタイラーメン（乾麺）：1玉</li><li>＜スープ1＞</li><li>醤油：大さじ1と1/2</li><li>砂糖：小さじ1/4</li><li>ハイミー：7振り</li><li>塩：1つまみ</li><li>豆乳：小さじ2</li><li>＜スープ2＞</li><li>ひき肉油（ラード代用）：大さじ1</li><li>ウェイパー：小さじ1</li><li>酒：小さじ2</li><li>ガーリックパウダー：5振り</li><li>コショウ：4振り</li><li>豚バラ液：水300cc×豚バラ（または豚こま）：30gをハンドブレンダー攪拌</li><li>乳化用追加ひき肉油：小さじ1〜2</li><li>＜秘伝のたれ＞</li><li>コチュジャン：小さじ1</li><li>一味唐辛子：小さじ1/2</li><li>味の素：1振り</li><li>コショウ（秘伝のたれ用）：2振り</li><li>ごま油：小さじ1/2</li><li>水（秘伝のたれ用）：小さじ1/3</li><li>＜薬味＞</li><li>ネギ</li></ul></div>
         </div>
       </div>
       
       <div>
         <div class="section-title" style="margin-top:0.5rem;">作り方</div>
-        <div class="steps" id="stepsList"> <ol>
-            <li>① ひき肉油を準備豚ひき肉を弱火でじっくり炒め、出てきた油を茶こしで濾しておく。これが“旨味ラード”になる。</li>
-            <li>② 醤油ダレを作る鍋に醤油・砂糖・ハイミー・塩・豆乳を入れ、ふつっとする直前まで温めて器に移す。</li>
-            <li>③ 豚バラスープを作る水300ccと豚バラをミキサー（ハンドブレンダー）で撹拌し、鍋に入れる。ひき肉油大さじ1、ウェイパー、酒、ガーリックパウダー、コショウを加えて10分煮る。</li>
-            <li>④ 乳化を強化ここで“追加ひき肉油”を小さじ1〜2入れると、一蘭のような白濁感とコクが増す。</li>
-            <li>⑤ スープを仕上げる②で作った醤油ダレを鍋に戻し、全体を混ぜてスープ完成。</li>
-            <li>⑥ 秘伝の赤いタレを作るコチュジャン、一味、味の素、コショウ、ごま油、水を混ぜて赤ダレを作る。</li>
-            <li>⑦ 盛り付け茹でたマルタイ麺にスープを注ぎ、中央に赤ダレ、小ネギを乗せて完成。</li>
-          </ol>
-        </div>
+        <div class="steps"><ol><li>① ひき肉油を準備豚ひき肉を弱火でじっくり炒め、出てきた油を茶こしで濾しておく。これが“旨味ラード”になる。</li><li>② 醤油ダレを作る鍋に醤油・砂糖・ハイミー・塩・豆乳を入れ、ふつっとする直前まで温めて器に移す。</li><li>③ 豚バラスープを作る水300ccと豚バラをミキサー（ハンドブレンダー）で撹拌し、鍋に入れる。ひき肉油大さじ1、ウェイパー、酒、ガーリックパウダー、コショウを加えて10分煮る。</li><li>④ 乳化を強化ここで“追加ひき肉油”を小さじ1〜2入れると、一蘭のような白濁感とコクが増す。</li><li>⑤ スープを仕上げる②で作った醤油ダレを鍋に戻し、全体を混ぜてスープ完成。</li><li>⑥ 秘伝の赤いタレを作るコチュジャン、一味、味の素、コショウ、ごま油、水を混ぜて赤ダレを作る。</li><li>⑦ 盛り付け茹でたマルタイ麺にスープを注ぎ、中央に赤ダレ、小ネギを乗せて完成。</li></ol></div>
       </div>
     </section>
     <footer class="card-footer">ゴリのレシピ</footer>
@@ -137,27 +100,15 @@ body {
 
   <script>
     document.getElementById("editRecipeBtn").addEventListener("click", () => {
-      // 材料リストを取得して配列に変換
-      const ingredientElements = document.querySelectorAll("#ingredientsList li");
-      const ingredientsArray = Array.from(ingredientElements).map(el => el.textContent);
-
-      // 手順リストを取得して配列に変換
-      const stepElements = document.querySelectorAll("#stepsList li");
-      const stepsArray = Array.from(stepElements).map(el => el.textContent);
-
       const recipeData = {
         genre: "主食",
         title: "ひき肉油で作る“最適化版ジェネリック一蘭”",
         subtitle: "ラーメン,豚",
-        ingredients: ingredientsArray,
-        steps: stepsArray,
+        ingredients: ["＜麺＞","マルタイラーメン（乾麺）：1玉","＜スープ1＞","醤油：大さじ1と1/2","砂糖：小さじ1/4","ハイミー：7振り","塩：1つまみ","豆乳：小さじ2","＜スープ2＞","ひき肉油（ラード代用）：大さじ1","ウェイパー：小さじ1","酒：小さじ2","ガーリックパウダー：5振り","コショウ：4振り","豚バラ液：水300cc×豚バラ（または豚こま）：30gをハンドブレンダー攪拌","乳化用追加ひき肉油：小さじ1〜2","＜秘伝のたれ＞","コチュジャン：小さじ1","一味唐辛子：小さじ1/2","味の素：1振り","コショウ（秘伝のたれ用）：2振り","ごま油：小さじ1/2","水（秘伝のたれ用）：小さじ1/3","＜薬味＞","ネギ"],
+        steps: ["① ひき肉油を準備豚ひき肉を弱火でじっくり炒め、出てきた油を茶こしで濾しておく。これが“旨味ラード”になる。","② 醤油ダレを作る鍋に醤油・砂糖・ハイミー・塩・豆乳を入れ、ふつっとする直前まで温めて器に移す。","③ 豚バラスープを作る水300ccと豚バラをミキサー（ハンドブレンダー）で撹拌し、鍋に入れる。ひき肉油大さじ1、ウェイパー、酒、ガーリックパウダー、コショウを加えて10分煮る。","④ 乳化を強化ここで“追加ひき肉油”を小さじ1〜2入れると、一蘭のような白濁感とコクが増す。","⑤ スープを仕上げる②で作った醤油ダレを鍋に戻し、全体を混ぜてスープ完成。","⑥ 秘伝の赤いタレを作るコチュジャン、一味、味の素、コショウ、ごま油、水を混ぜて赤ダレを作る。","⑦ 盛り付け茹でたマルタイ麺にスープを注ぎ、中央に赤ダレ、小ネギを乗せて完成。"],
         image: document.getElementById("cardImage")?.src || ""
       };
-
-      // セッションストレージに保存
       sessionStorage.setItem("edit_recipe_target", JSON.stringify(recipeData));
-      
-      // 編集モードでindexページへ遷移
       window.location.href = "../index.html?mode=edit";
     });
   </script>
