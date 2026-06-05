@@ -75,22 +75,6 @@
       max-width: 960px;
       width: 100%;
       margin: 0 auto;
-      flex: 1; /* フッターを最下部に固定するため追加 */
-    }
-
-    /* 🖤 初代の黒いフッターバーのスタイルを完全復元 */
-    footer {
-      background: #000000;
-      border-top: 1px solid var(--border);
-      padding: 1rem;
-      text-align: center;
-      margin-top: auto;
-    }
-    .footer-text {
-      font-size: 0.75rem;
-      color: var(--accent-soft);
-      font-weight: 600;
-      letter-spacing: 0.05em;
     }
 
     /* Category row */
@@ -173,7 +157,7 @@
       border-color: var(--accent-soft);
     }
     
-    /* サムネイル枠 */
+    /* サムネイル枠（比率を維持し、画像なし時の文字表示に対応） */
     .recipe-thumb-wrapper {
       width: 100%;
       aspect-ratio: 4 / 3;
@@ -190,6 +174,7 @@
       height: 100%;
       object-fit: cover;
     }
+    /* 画像が無いときにジャンル名を表示するプレースホルダー用スタイル */
     .recipe-thumb-placeholder {
       font-size: 1.5rem;
       font-weight: 700;
@@ -296,6 +281,16 @@
     .detail-ingredients li,
     .detail-steps li {
       margin-bottom: 0.15rem;
+    }
+    .detail-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 0.2rem;
+    }
+    .detail-note {
+      font-size: 0.7rem;
+      color: var(--muted);
     }
 
     /* Add recipe modal */
@@ -490,18 +485,18 @@
           </div>
         </div>
         <div>
-          <div class="section-title" style="margin-top:0.5rem;">作り方</div>
+          <div class="detail-section-title" style="margin-top:0.5rem;">作り方</div>
           <div class="detail-steps">
             <ol id="detailSteps"></ol>
           </div>
         </div>
       </div>
+      
+      <div class="detail-footer">
+        <span class="detail-note">※ このレイアウトは「ジェネリック一蘭」レシピカード形式です。</span>
+      </div>
     </section>
   </main>
-
-  <footer>
-    <div class="footer-text">🍳 ゴリのレシピ — ジェネリック一蘭形式</div>
-  </footer>
 
   <div class="modal-backdrop" id="addModalBackdrop">
     <div class="modal">
@@ -521,8 +516,6 @@
             <input type="password" class="form-input" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" />
           </div>
         </div>
-
-        <input type="hidden" id="inputOriginalFile" value="" />
 
         <div class="form-row">
           <label class="form-label">ジャンル</label>
@@ -592,7 +585,6 @@
       document.getElementById("headerHome").addEventListener("click", returnToMainMenu);
       document.getElementById("addBtn").addEventListener("click", () => {
         document.getElementById("modalTitle").textContent = "レシピ追加";
-        document.getElementById("inputOriginalFile").value = ""; 
         openAddModal();
       });
       document.getElementById("menuBtn").addEventListener("click", toggleTagBar);
@@ -690,11 +682,13 @@
           window.location.href = "recipes/" + recipe.file;
         });
 
+        // サムネイル用のアウター枠を生成
         const thumbWrapper = document.createElement("div");
         thumbWrapper.className = "recipe-thumb-wrapper";
 
         const imageSrc = recipe.thumb || recipe.image || "";
 
+        // 💡 画像データが存在する場合は画像を表示。ない場合は文字による代用表示
         if (imageSrc && imageSrc !== "") {
           const img = document.createElement("img");
           img.className = "recipe-thumb";
@@ -851,7 +845,6 @@
         document.getElementById("inputIngredients").value = "";
         document.getElementById("inputSteps").value = "";
         document.getElementById("inputImage").value = "";
-        document.getElementById("inputOriginalFile").value = ""; 
         currentPreviewData = null;
       }
     }
@@ -863,7 +856,6 @@
       const ingredientsText = document.getElementById("inputIngredients").value;
       const stepsText = document.getElementById("inputSteps").value;
       const fileInput = document.getElementById("inputImage");
-      const originalFile = document.getElementById("inputOriginalFile").value.trim();
 
       if (!title) {
         alert("タイトルは必須です。");
@@ -881,8 +873,6 @@
         imageData = currentPreviewData.image;
       }
 
-      const targetFile = originalFile ? originalFile : (safeFileName(title) + ".html");
-
       return {
         genre,
         title,
@@ -892,7 +882,7 @@
         steps,
         image: imageData,
         thumb: imageData,
-        file: targetFile,
+        file: safeFileName(title) + ".html",
       };
     }
 
@@ -932,6 +922,7 @@
       tokenEl.addEventListener("input", () => localStorage.setItem("gh_token", tokenEl.value.trim()));
     }
 
+    // 💡 HTMLに加えて「recipe-list.json」も取得＆同期してGitHubへ同時上書き保存する関数
     async function uploadToGitHub(recipe) {
       const user = localStorage.getItem("gh_user");
       const token = localStorage.getItem("gh_token");
@@ -943,6 +934,7 @@
         return false;
       }
 
+      // --- 1. レシピHTMLの保存準備 ---
       const recipePath = "recipes/" + recipe.file;
       const recipeUrl = `https://api.github.com/repos/${user}/${repo}/contents/${recipePath}`;
       const htmlContent = buildRecipeCardHtml(recipe);
@@ -954,6 +946,7 @@
         if (res.ok) { const data = await res.json(); recipeSha = data.sha; }
       } catch (e) {}
 
+      // --- 2. recipe-list.json の自動更新準備 ---
       const jsonPath = "recipe-list.json";
       const jsonUrl = `https://api.github.com/repos/${user}/${repo}/contents/${jsonPath}`;
       
@@ -961,37 +954,41 @@
       let currentJsonData = [];
       
       try {
-        const res = await fetch(jsonUrl, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
+        const res = await fetch(jsonUrl, { headers: { "Authorization": `token ${token}` } });
         if (res.ok) {
           const data = await res.json();
           jsonSha = data.sha;
+          // 現在のJSONデータをGitHubからダウンロードしてデコード
           const decodedJson = decodeURIComponent(escape(atob(data.content)));
           currentJsonData = JSON.parse(decodedJson);
         }
       } catch (e) {
-        console.error("JSONの取得に失敗しました。新規作成します。", e);
+        console.error("JSONの取得に失敗したか、存在しません。新規作成します。", e);
       }
 
+      // JSONデータ内の該当レシピを検索（あれば上書き、なければ新規追加）
       const existingIndex = currentJsonData.findIndex(r => r.file === recipe.file);
       const jsonItem = {
         genre: recipe.genre,
         title: recipe.title,
         subtitle: recipe.subtitle,
         tags: recipe.tags,
-        thumb: recipe.thumb || "", 
+        thumb: recipe.thumb || "", // 💡 これでJSONファイル側にもBase64データが同期されます
         file: recipe.file
       };
 
       if (existingIndex >= 0) {
-        currentJsonData[existingIndex] = jsonItem; 
+        currentJsonData[existingIndex] = jsonItem;
       } else {
-        currentJsonData.push(jsonItem); 
+        currentJsonData.push(jsonItem);
       }
 
       const updatedJsonText = JSON.stringify(currentJsonData, null, 2);
       const base64Json = btoa(unescape(encodeURIComponent(updatedJsonText)));
 
+      // --- 3. GitHubへ両ファイル同時送信 ---
       try {
+        // ① レシピHTMLのPUT
         const bodyHtml = { message: `recipe: HTML ${recipeSha ? 'Update' : 'Add'} ${recipe.title}`, content: base64Html };
         if (recipeSha) bodyHtml.sha = recipeSha;
         
@@ -1007,6 +1004,7 @@
           return false;
         }
 
+        // ② recipe-list.jsonのPUT
         const bodyJson = { message: `recipe: JSON List Update for ${recipe.title}`, content: base64Json };
         if (jsonSha) bodyJson.sha = jsonSha;
 
@@ -1045,10 +1043,8 @@
           document.getElementById("inputIngredients").value = (recipe.ingredients || []).join("\n");
           document.getElementById("inputSteps").value = (recipe.steps || []).join("\n");
           
-          document.getElementById("inputOriginalFile").value = recipe.file || "";
-          
           if (recipe.image && !recipe.image.startsWith(window.location.origin)) {
-            currentPreviewData = { image: recipe.image, thumb: recipe.image, file: recipe.file || "" };
+            currentPreviewData = { image: recipe.image, thumb: recipe.image };
           }
 
           document.getElementById("modalTitle").textContent = "レシピ編集";
@@ -1066,6 +1062,7 @@
     function buildRecipeCardHtml(recipe) {
       const ingList = (recipe.ingredients || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("");
       const stepList = (recipe.steps || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("");
+      const tagsText = (recipe.tags || []).join(", ");
       const rawIngredients = JSON.stringify(recipe.ingredients || []);
       const rawSteps = JSON.stringify(recipe.steps || []);
 
@@ -1082,11 +1079,6 @@ body {
   background: radial-gradient(circle at top, #222 0, #050505 55%, #000 100%);
   color: #f5f5f5;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column; /* フッター固定用 */
-}
-.main-content {
-  flex: 1;
   display: flex;
   justify-content: center;
   padding: 1rem;
@@ -1140,21 +1132,8 @@ body {
 .ingredients, .steps { font-size: 0.8rem; line-height: 1.5; }
 .ingredients ul, .steps ol { margin: 0.2rem 0 0; padding-left: 1.1rem; }
 .ingredients li, .steps li { margin-bottom: 0.15rem; }
-
-/* 🖤 レシピ詳細側（HTML）のフッターバーも同様に漆黒化 */
-footer {
-  background: #000000;
-  border-top: 1px solid #333;
-  padding: 1rem;
-  text-align: center;
-  margin-top: auto;
-}
-.footer-text {
-  font-size: 0.75rem;
-  color: #ff7043;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-}
+.card-footer { display: flex; justify-content: flex-end; margin-top: 0.2rem; }
+.card-note { font-size: 0.7rem; color: #aaaaaa; }
 
 @media (max-width: 720px) {
   .card-top-row { grid-template-columns: 1fr; }
@@ -1162,51 +1141,44 @@ footer {
 </style>
 </head>
 <body>
-<div class="main-content">
-  <div class="card">
-    <button class="edit-btn" id="editBtn">編集</button>
-    <div class="card-header">
-      <div>
-        <div class="card-title">${escapeHtml(recipe.title)}</div>
-        <div class="card-subtitle">${escapeHtml(recipe.subtitle)}</div>
-      </div>
-      <div class="card-tag">${escapeHtml(recipe.genre)}</div>
+<div class="card">
+  <button class="edit-btn" id="editBtn">編集</button>
+  <div class="card-header">
+    <div>
+      <div class="card-title">${escapeHtml(recipe.title)}</div>
+      <div class="card-subtitle">${escapeHtml(recipe.subtitle)}</div>
     </div>
-    <div class="card-body">
-      <div class="card-top-row">
-        <div>
-          <img id="cardImage" class="card-image" src="${recipe.image || ''}" alt="レシピ画像" style="display:${recipe.image ? 'block' : 'none'};" />
-        </div>
-        <div>
-          <div class="section-title">材料</div>
-          <div class="ingredients"><ul>${ingList}</ul></div>
-        </div>
+    <div class="card-tag">${escapeHtml(recipe.genre)}</div>
+  </div>
+  <div class="card-body">
+    <div class="card-top-row">
+      <div>
+        <img id="cardImage" class="card-image" src="${recipe.image || ''}" alt="レシピ画像" style="display:${recipe.image ? 'block' : 'none'};" />
       </div>
       <div>
-        <div class="section-title" style="margin-top:0.5rem;">作り方</div>
-        <div class="steps"><ol>${stepList}</ol></div>
+        <div class="section-title">材料</div>
+        <div class="ingredients"><ul>${ingList}</ul></div>
       </div>
     </div>
+    <div>
+      <div class="section-title" style="margin-top:0.5rem;">作り方</div>
+      <div class="steps"><ol>${stepList}</ol></div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <span class="card-note">ゴリのレシピ</span>
   </div>
 </div>
 
-<footer>
-  <div class="footer-text">🍳 ゴリのレシピ — ジェネリック一蘭形式</div>
-</footer>
-
 <script>
 document.getElementById("editBtn").addEventListener("click", () => {
-  const pathParts = window.location.pathname.split('/');
-  const currentFileName = pathParts[pathParts.length - 1] || "recipe.html";
-
   const target = {
     genre: ${JSON.stringify(recipe.genre)},
     title: ${JSON.stringify(recipe.title)},
     subtitle: ${JSON.stringify(recipe.subtitle)},
     ingredients: ${rawIngredients},
     steps: ${rawSteps},
-    image: ${JSON.stringify(recipe.image)},
-    file: currentFileName 
+    image: ${JSON.stringify(recipe.image)}
   };
   sessionStorage.setItem("edit_recipe_target", JSON.stringify(target));
   window.location.href = "../index.html?mode=edit";
