@@ -797,7 +797,7 @@
 
     function readFileAsDataURL(file) {
       return new Promise((resolve, reject) => {
-        const声明 reader = new FileReader();
+        const reader = new FileReader(); // ← ここを const reader に修正しました
         reader.onload = (e) => resolve(e.target.result);
         reader.onerror = (e) => reject(e);
         reader.readAsDataURL(file);
@@ -827,7 +827,6 @@
       const stepList = (recipe.steps || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("");
       const tagsText = (recipe.tags || []).join(", ");
 
-      // 自動抽出スクリプト用に、articleタグにメタデータを仕込みます
       return `<!DOCTYPE html>
 <html lang="ja">
 <head>
