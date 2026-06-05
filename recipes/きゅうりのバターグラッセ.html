@@ -70,14 +70,14 @@ body {
 </style>
 </head>
 <body>
-  <article class="card" data-genre="副菜" data-title="きゅうりのバターグラッセ" data-subtitle="" data-tags="">
+  <article class="card" data-genre="副菜" data-title="きゅうりのバターグラッセ" data-subtitle="きゅうり,前菜" data-tags="きゅうり, 前菜">
     <button class="edit-btn" id="editRecipeBtn">編集</button>
     <header class="card-header">
       <div>
         <div class="card-title">きゅうりのバターグラッセ</div>
-        <div class="card-subtitle"></div>
+        <div class="card-subtitle">きゅうり,前菜</div>
       </div>
-      <div class="card-tag">副菜</div>
+      <div class="card-tag">きゅうり, 前菜</div>
     </header>
     <section class="card-body">
       <div class="card-top-row">
@@ -103,7 +103,7 @@ body {
       const recipeData = {
         genre: "副菜",
         title: "きゅうりのバターグラッセ",
-        subtitle: "",
+        subtitle: "きゅうり,前菜",
         ingredients: ["きゅうり：1〜2本（乱切り）","水：きゅうりがヒタヒタになる量","バター：1かけ","砂糖：大さじ1","塩：小さじ1（または3ふり）"],
         steps: ["鍋にきゅうり＋水＋バター＋砂糖＋塩を入れる","中火で煮詰め、水分がほぼなくなるまで加熱","器に盛ると“洋風きゅうりの煮物”の完成"],
         image: document.getElementById("cardImage")?.src || ""
