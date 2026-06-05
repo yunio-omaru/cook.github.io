@@ -191,9 +191,9 @@
         hideDetail();
       };
 
-      // ★ ここから alert 完全削除（空の関数にする）
-      document.getElementById("addBtn").onclick = () => {};
-      // ★ ここまで
+      document.getElementById("addBtn").onclick = () => {
+        alert("レシピ追加は index.html 内のモーダルで行います（404 は出ません）");
+      };
 
       document.getElementById("menuBtn").onclick = () => {
         toggleTagBar();
@@ -251,7 +251,21 @@
 
       try {
         const res = await fetch(`./recipes/${recipe.file}`, { cache: "no-store" });
-        wrapper.innerHTML = await res.text();
+        let html = await res.text();
+
+        // ▼ プレビュー右上のボタン
+        const controlBar = `
+          <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-bottom:0.5rem;">
+            <button class="icon-btn" onclick="openEditModal('${recipe.file}')">編集</button>
+            <button class="icon-btn" onclick="saveRecipe()">レシピ追加</button>
+          </div>
+        `;
+
+        // ▼ レイアウト修正
+        html = applyPreviewLayout(html);
+
+        wrapper.innerHTML = controlBar + html;
+
       } catch {
         wrapper.innerHTML = `<div style="color:#aaa;">レシピファイルが見つかりません</div>`;
       }
@@ -290,6 +304,57 @@
       });
 
       bar.style.display = "flex";
+    }
+
+    // ▼ レイアウト修正（画像｜材料 → 作り方）
+    function applyPreviewLayout(html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+
+      const img = doc.querySelector("img");
+      const ingredients = doc.querySelector(".ingredients");
+      const steps = doc.querySelector(".steps");
+
+      if (!img || !ingredients || !steps) return html;
+
+      ingredients.style.columnCount = 2;
+      ingredients.style.columnGap = "1rem";
+      ingredients.style.margin = "0";
+
+      steps.style.textAlign = "left";
+      steps.style.marginTop = "1rem";
+
+      const container = document.createElement("div");
+      container.innerHTML = `
+        <div style="display:flex; gap:1rem; align-items:flex-start;">
+          <div style="flex:1; min-width:40%;">
+            ${img.outerHTML}
+          </div>
+          <div style="flex:1; min-width:40%;">
+            <h3 style="margin:0 0 0.3rem 0;">材料</h3>
+            ${ingredients.outerHTML}
+          </div>
+        </div>
+
+        <hr style="border-color:#333; margin:1rem 0;">
+
+        <div>
+          <h3 style="margin:0 0 0.3rem 0;">作り方</h3>
+          ${steps.outerHTML}
+        </div>
+      `;
+
+      return container.innerHTML;
+    }
+
+    // ▼ 編集モーダル（仮）
+    function openEditModal(fileName) {
+      alert("編集モーダルを開く処理をここに実装（既存の追加モーダルを再利用）");
+    }
+
+    // ▼ レシピ追加（仮）
+    function saveRecipe() {
+      alert("レシピ追加処理をここに実装（既存の保存処理を呼ぶ）");
     }
   </script>
 </body>
