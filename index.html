@@ -137,7 +137,6 @@
       background: #222;
     }
 
-    /* detail */
     .detail-wrapper {
       border-radius: 0.9rem;
       border: 1px solid var(--border);
@@ -147,190 +146,45 @@
       flex-direction: column;
       gap: 0.75rem;
     }
-
-    .detail-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-
-    .detail-actions {
-      display: flex;
-      gap: 0.4rem;
-    }
-
-    .detail-btn {
-      border: 1px solid var(--border);
-      background: #151515;
-      color: var(--text);
-      padding: 0.25rem 0.7rem;
-      border-radius: 999px;
-      cursor: pointer;
-      font-size: 0.75rem;
-    }
-    .detail-btn:hover {
-      background: #222;
-      border-color: var(--accent-soft);
-    }
-
-    .detail-top {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-    }
-
-    .detail-image {
-      width: 100%;
-      border-radius: 0.75rem;
-      border: 1px solid rgba(255,255,255,0.12);
-      object-fit: cover;
-      background: #111;
-      aspect-ratio: 4 / 3;
-    }
-
-    .ingredients-columns {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-    }
-
-    .detail-bottom {
-      margin-top: 1rem;
-    }
-
-    .detail-section-title {
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin-bottom: 0.25rem;
-    }
-
-    @media (max-width: 720px) {
-      .detail-top {
-        grid-template-columns: 1fr;
-      }
-      .ingredients-columns {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* add modal */
-    #addModalBackdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 999;
-    }
-    #addModal {
-      background: #1a1a1a;
-      border: 1px solid var(--border);
-      border-radius: 0.75rem;
-      padding: 1rem;
-      width: min(90%, 600px);
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    .modal-row {
-      margin-bottom: 0.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-    .modal-row label {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-    .modal-row input,
-    .modal-row textarea {
-      width: 100%;
-      padding: 0.4rem;
-      border-radius: 0.4rem;
-      border: 1px solid var(--border);
-      background: #111;
-      color: var(--text);
-    }
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.5rem;
-      margin-top: 1rem;
-    }
-    .modal-btn {
-      padding: 0.4rem 0.8rem;
-      border-radius: 0.4rem;
-      border: 1px solid var(--border);
-      background: #151515;
-      color: var(--text);
-      cursor: pointer;
-    }
-    .modal-btn:hover {
-      background: #222;
-    }
   </style>
 </head>
 
 <body>
-  <!-- レシピ追加モーダル -->
-  <div id="addModalBackdrop">
-    <div id="addModal">
-      <h2 style="margin-top:0;">レシピ追加</h2>
-
-      <div class="modal-row">
-        <label>ジャンル</label>
-        <input id="inputGenre" placeholder="主食 / 副食 / 副菜 / 主菜" />
-      </div>
-
-      <div class="modal-row">
-        <label>タイトル</label>
-        <input id="inputTitle" placeholder="例：牛丼" />
-      </div>
-
-      <div class="modal-row">
-        <label>サブタイトル</label>
-        <input id="inputSubtitle" placeholder="例：甘辛タレでご飯が進む" />
-      </div>
-
-      <div class="modal-row">
-        <label>材料（1行につき1つ）</label>
-        <textarea id="inputIngredients" rows="5" placeholder="牛肉 200g&#10;玉ねぎ 1個&#10;醤油 大さじ2"></textarea>
-      </div>
-
-      <div class="modal-row">
-        <label>作り方（1行につき1工程）</label>
-        <textarea id="inputSteps" rows="6" placeholder="玉ねぎを切る&#10;牛肉を炒める&#10;調味料を入れて煮る"></textarea>
-      </div>
-
-      <div class="modal-row">
-        <label>画像URL（任意）</label>
-        <input id="inputImage" placeholder="https://example.com/photo.jpg" />
-      </div>
-
-      <div class="modal-actions">
-        <button class="modal-btn" id="cancelAddBtn">キャンセル</button>
-        <button class="modal-btn" id="saveAddBtn">保存（HTMLダウンロード）</button>
-      </div>
+  <header>
+    <div class="header-title" id="headerHome">ゴリのレシピ</div>
+    <div class="header-actions">
+      <button class="icon-btn" id="addBtn">＋</button>
+      <button class="icon-btn" id="menuBtn">≡</button>
     </div>
-  </div>
+  </header>
+
+  <main>
+    <div class="category-row" id="categoryRow">
+      <button class="category-btn" data-genre="主食">▼ 主食</button>
+      <button class="category-btn" data-genre="副食">▼ 副食</button>
+      <button class="category-btn" data-genre="副菜">▼ 副菜</button>
+      <button class="category-btn" data-genre="主菜">▼ 主菜</button>
+    </div>
+
+    <div class="tag-bar" id="tagBar"></div>
+
+    <div class="recipe-list" id="recipeList"></div>
+
+    <section class="detail-wrapper" id="detailWrapper"></section>
+  </main>
 
   <script>
     let allRecipes = [];
     let currentGenre = null;
     let currentTag = null;
-    let isEditing = false;
-    window._currentRecipe = null;
 
     document.addEventListener("DOMContentLoaded", () => {
       loadRecipeList();
       setupUI();
-      setupEditingGuard();
-      setupAddModal();
     });
 
     function setupUI() {
       document.getElementById("headerHome").onclick = () => {
-        if (!confirmEditing()) return;
         currentGenre = null;
         currentTag = null;
         renderRecipeList();
@@ -338,17 +192,14 @@
       };
 
       document.getElementById("addBtn").onclick = () => {
-        if (!confirmEditing()) return;
-        openAddModal();
+        alert("レシピ追加は index.html 内のモーダルで行います（404 は出ません）");
       };
 
       document.getElementById("menuBtn").onclick = () => {
-        if (!confirmEditing()) return;
         toggleTagBar();
       };
 
       document.getElementById("categoryRow").onclick = (e) => {
-        if (!confirmEditing()) return;
         const btn = e.target.closest(".category-btn");
         if (!btn) return;
         currentGenre = btn.dataset.genre;
@@ -356,23 +207,6 @@
         renderRecipeList();
         hideDetail();
       };
-    }
-
-    function setupEditingGuard() {
-      ["inputGenre", "inputTitle", "inputSubtitle", "inputIngredients", "inputSteps", "inputImage"]
-        .forEach(id => {
-          const el = document.getElementById(id);
-          if (el) {
-            el.addEventListener("input", () => {
-              isEditing = true;
-            });
-          }
-        });
-    }
-
-    function confirmEditing() {
-      if (!isEditing) return true;
-      return confirm("まだ編集中です。情報が消去されてしまいますがよろしいでしょうか。");
     }
 
     async function loadRecipeList() {
@@ -401,10 +235,7 @@
       filtered.forEach(recipe => {
         const card = document.createElement("div");
         card.className = "recipe-card-mini";
-        card.onclick = () => {
-          if (!confirmEditing()) return;
-          openDetail(recipe);
-        };
+        card.onclick = () => openDetail(recipe);
 
         card.innerHTML = `
           <img class="recipe-thumb" src="${recipe.thumb || ""}">
@@ -415,61 +246,21 @@
     }
 
     async function openDetail(recipe) {
-      window._currentRecipe = recipe;
-
       const wrapper = document.getElementById("detailWrapper");
       wrapper.style.display = "block";
 
-      document.getElementById("detailTitle").textContent = recipe.title;
-      document.getElementById("detailSubtitle").textContent = recipe.subtitle;
-
-      const img = document.getElementById("detailImage");
-      img.src = recipe.thumb || "";
-
-      const ing1 = document.getElementById("detailIngredientsCol1");
-      const ing2 = document.getElementById("detailIngredientsCol2");
-      ing1.innerHTML = "";
-      ing2.innerHTML = "";
-
-      const half = Math.ceil((recipe.ingredients || []).length / 2);
-      (recipe.ingredients || []).forEach((line, i) => {
-        const li = document.createElement("li");
-        li.textContent = line;
-        if (i < half) ing1.appendChild(li);
-        else ing2.appendChild(li);
-      });
-
-      const stepsEl = document.getElementById("detailSteps");
-      stepsEl.innerHTML = "";
-      (recipe.steps || []).forEach(line => {
-        const li = document.createElement("li");
-        li.textContent = line;
-        stepsEl.appendChild(li);
-      });
+      try {
+        const res = await fetch(`./recipes/${recipe.file}`, { cache: "no-store" });
+        wrapper.innerHTML = await res.text();
+      } catch {
+        wrapper.innerHTML = `<div style="color:#aaa;">レシピファイルが見つかりません</div>`;
+      }
 
       wrapper.scrollIntoView({ behavior: "smooth" });
-
-      document.getElementById("editRecipeBtn").onclick = () => {
-        const r = window._currentRecipe;
-        if (!r) return;
-
-        document.getElementById("inputGenre").value = r.genre;
-        document.getElementById("inputTitle").value = r.title;
-        document.getElementById("inputSubtitle").value = r.subtitle;
-        document.getElementById("inputIngredients").value = r.ingredients.join("\n");
-        document.getElementById("inputSteps").value = r.steps.join("\n");
-        document.getElementById("inputImage").value = r.thumb || "";
-
-        isEditing = true;
-        openAddModal();
-      };
-
-      document.getElementById("addNewRecipeBtn").onclick = () => {
-        if (!confirmEditing()) return;
-        openAddModal();
-      };
     }
-      wrapper.style.display = "none";
+
+    function hideDetail() {
+      document.getElementById("detailWrapper").style.display = "none";
     }
 
     function toggleTagBar() {
@@ -478,7 +269,6 @@
         bar.style.display = "none";
         currentTag = null;
         renderRecipeList();
-        hideDetail();
         return;
       }
 
@@ -491,7 +281,6 @@
         pill.className = "tag-pill";
         pill.textContent = tag;
         pill.onclick = () => {
-          if (!confirmEditing()) return;
           currentTag = tag;
           currentGenre = null;
           renderRecipeList();
@@ -501,130 +290,6 @@
       });
 
       bar.style.display = "flex";
-    }
-
-    /* -------------------------
-       レシピ追加モーダル処理
-    ------------------------- */
-    function setupAddModal() {
-      document.getElementById("cancelAddBtn").onclick = () => {
-        if (!confirmEditing()) return;
-        closeAddModal();
-      };
-
-      document.getElementById("saveAddBtn").onclick = () => {
-        saveRecipe();
-      };
-    }
-
-    function openAddModal() {
-      document.getElementById("addModalBackdrop").style.display = "flex";
-      isEditing = true;
-    }
-
-    function closeAddModal() {
-      document.getElementById("addModalBackdrop").style.display = "none";
-      isEditing = false;
-      clearAddForm();
-    }
-
-    function clearAddForm() {
-      document.getElementById("inputGenre").value = "";
-      document.getElementById("inputTitle").value = "";
-      document.getElementById("inputSubtitle").value = "";
-      document.getElementById("inputIngredients").value = "";
-      document.getElementById("inputSteps").value = "";
-      document.getElementById("inputImage").value = "";
-    }
-
-    function saveRecipe() {
-      const genre = document.getElementById("inputGenre").value.trim();
-      const title = document.getElementById("inputTitle").value.trim();
-      const subtitle = document.getElementById("inputSubtitle").value.trim();
-      const ingredients = document.getElementById("inputIngredients").value.trim().split("\n");
-      const steps = document.getElementById("inputSteps").value.trim().split("\n");
-      const image = document.getElementById("inputImage").value.trim();
-
-      if (!genre || !title) {
-        alert("ジャンルとタイトルは必須です");
-        return;
-      }
-
-      const recipe = {
-        genre,
-        title,
-        subtitle,
-        ingredients,
-        steps,
-        thumb: image,
-        file: `${title}.html`,
-        tags: extractTags(ingredients, steps)
-      };
-
-      downloadRecipeHtml(recipe);
-      generateJsonSnippet(recipe);
-
-      isEditing = false;
-      closeAddModal();
-    }
-
-    function extractTags(ingredients, steps) {
-      const tags = new Set();
-      ingredients.forEach(i => {
-        if (i.length > 0) tags.add(i.split(" ")[0]);
-      });
-      return [...tags];
-    }
-
-    function downloadRecipeHtml(recipe) {
-      const html = `
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>${recipe.title}</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body { font-family: sans-serif; padding: 1rem; }
-img { width: 100%; border-radius: 0.5rem; }
-</style>
-</head>
-<body>
-<h1>${recipe.title}</h1>
-<h3>${recipe.subtitle}</h3>
-<img src="${recipe.thumb}">
-<h2>材料</h2>
-<ul>
-${recipe.ingredients.map(i => `<li>${i}</li>`).join("")}
-</ul>
-<h2>作り方</h2>
-<ol>
-${recipe.steps.map(s => `<li>${s}</li>`).join("")}
-</ol>
-</body>
-</html>
-`;
-
-      const blob = new Blob([html], { type: "text/html" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = recipe.file;
-      a.click();
-    }
-
-    function generateJsonSnippet(recipe) {
-      const snippet = `
-{
-  "genre": "${recipe.genre}",
-  "title": "${recipe.title}",
-  "subtitle": "${recipe.subtitle}",
-  "tags": ${JSON.stringify(recipe.tags)},
-  "thumb": "${recipe.thumb}",
-  "file": "${recipe.file}"
-}
-`;
-      console.log("JSON snippet:\n", snippet);
-      alert("JSON スニペットをコンソールに出力しました");
     }
   </script>
 </body>
