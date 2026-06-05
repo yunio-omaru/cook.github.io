@@ -24,6 +24,7 @@
       display: flex;
       flex-direction: column;
     }
+    a { color: inherit; text-decoration: none; }
 
     header {
       display: flex;
@@ -37,15 +38,34 @@
       top: 0;
       z-index: 10;
     }
-    .header-title { cursor: pointer; }
-
+    .header-title {
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
     .icon-btn {
       border: 1px solid var(--border);
       background: #151515;
       color: var(--text);
       border-radius: 999px;
       padding: 0.25rem 0.7rem;
+      font-size: 0.85rem;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .icon-btn:hover {
+      background: #222;
+      border-color: var(--accent-soft);
+      transform: translateY(-1px);
     }
 
     main {
@@ -67,7 +87,32 @@
       background: #151515;
       color: var(--text);
       padding: 0.3rem 0.9rem;
+      font-size: 0.8rem;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .category-btn.active {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, #2a1515, #151515);
+    }
+
+    .tag-bar {
+      margin-bottom: 0.75rem;
+      display: none;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .tag-pill {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 0.2rem 0.7rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      background: #141414;
+      color: var(--muted);
     }
 
     .recipe-list {
@@ -82,6 +127,8 @@
       border: 1px solid var(--border);
       overflow: hidden;
       cursor: pointer;
+      display: flex;
+      flex-direction: column;
     }
     .recipe-thumb {
       width: 100%;
@@ -90,7 +137,6 @@
       background: #222;
     }
 
-    /* ▼▼ プレビュー画面 ▼▼ */
     .detail-wrapper {
       border-radius: 0.9rem;
       border: 1px solid var(--border);
@@ -100,57 +146,6 @@
       flex-direction: column;
       gap: 0.75rem;
     }
-
-    .detail-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-
-    .detail-actions {
-      display: flex;
-      gap: 0.4rem;
-    }
-
-    .detail-btn {
-      border: 1px solid var(--border);
-      background: #151515;
-      color: var(--text);
-      padding: 0.25rem 0.7rem;
-      border-radius: 999px;
-      cursor: pointer;
-      font-size: 0.75rem;
-    }
-
-    .detail-top {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-    }
-
-    .detail-image {
-      width: 100%;
-      border-radius: 0.75rem;
-      border: 1px solid rgba(255,255,255,0.12);
-      object-fit: cover;
-      aspect-ratio: 4 / 3;
-    }
-
-    .ingredients-columns {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-    }
-
-    .detail-bottom {
-      margin-top: 1rem;
-    }
-
-    @media (max-width: 720px) {
-      .detail-top { grid-template-columns: 1fr; }
-      .ingredients-columns { grid-template-columns: 1fr; }
-    }
-    /* ▲▲ プレビュー画面 ▲▲ */
   </style>
 </head>
 
@@ -171,39 +166,11 @@
       <button class="category-btn" data-genre="主菜">▼ 主菜</button>
     </div>
 
+    <div class="tag-bar" id="tagBar"></div>
+
     <div class="recipe-list" id="recipeList"></div>
 
-    <!-- ▼ プレビュー画面 -->
-    <section class="detail-wrapper" id="detailWrapper">
-      <div class="detail-header">
-        <div>
-          <div id="detailTitle"></div>
-          <div id="detailSubtitle" style="font-size:0.8rem;color:#ccc;"></div>
-        </div>
-        <div class="detail-actions">
-          <button class="detail-btn" id="editRecipeBtn">編集</button>
-          <button class="detail-btn" id="addNewRecipeBtn">レシピ追加</button>
-        </div>
-      </div>
-
-      <div class="detail-top">
-        <img id="detailImage" class="detail-image" />
-
-        <div>
-          <div style="font-size:0.8rem;color:#ccc;">材料</div>
-          <div class="ingredients-columns">
-            <ul id="detailIngredientsCol1"></ul>
-            <ul id="detailIngredientsCol2"></ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="detail-bottom">
-        <div style="font-size:0.8rem;color:#ccc;">作り方</div>
-        <ol id="detailSteps"></ol>
-      </div>
-    </section>
-    <!-- ▲ プレビュー画面 -->
+    <section class="detail-wrapper" id="detailWrapper"></section>
   </main>
 
   <script>
@@ -224,23 +191,27 @@
         hideDetail();
       };
 
-      // ★ 古い alert を完全削除 → ダミー動作に変更
-      document.getElementById("addBtn").onclick = () => {
-        alert("レシピ追加（後でモーダル実装）");
+      // ★ ここから alert 完全削除（空の関数にする）
+      document.getElementById("addBtn").onclick = () => {};
+      // ★ ここまで
+
+      document.getElementById("menuBtn").onclick = () => {
+        toggleTagBar();
       };
 
-      document.getElementById("editRecipeBtn").onclick = () => {
-        alert("編集（後で実装）");
-      };
-
-      document.getElementById("addNewRecipeBtn").onclick = () => {
-        alert("レシピ追加（後で実装）");
+      document.getElementById("categoryRow").onclick = (e) => {
+        const btn = e.target.closest(".category-btn");
+        if (!btn) return;
+        currentGenre = btn.dataset.genre;
+        currentTag = null;
+        renderRecipeList();
+        hideDetail();
       };
     }
 
     async function loadRecipeList() {
       try {
-        const res = await fetch("./recipe-list.json");
+        const res = await fetch("./recipe-list.json", { cache: "no-store" });
         allRecipes = await res.json();
       } catch {
         allRecipes = [];
@@ -252,7 +223,16 @@
       const listEl = document.getElementById("recipeList");
       listEl.innerHTML = "";
 
-      allRecipes.forEach(recipe => {
+      let filtered = allRecipes;
+      if (currentGenre) filtered = filtered.filter(r => r.genre === currentGenre);
+      if (currentTag) filtered = filtered.filter(r => (r.tags || []).includes(currentTag));
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<div style="color:#aaa;font-size:0.9rem;">レシピ登録なし</div>`;
+        return;
+      }
+
+      filtered.forEach(recipe => {
         const card = document.createElement("div");
         card.className = "recipe-card-mini";
         card.onclick = () => openDetail(recipe);
@@ -265,42 +245,51 @@
       });
     }
 
-    function openDetail(recipe) {
+    async function openDetail(recipe) {
       const wrapper = document.getElementById("detailWrapper");
-      wrapper.style.display = "flex";
+      wrapper.style.display = "block";
 
-      document.getElementById("detailTitle").textContent = recipe.title;
-      document.getElementById("detailSubtitle").textContent = recipe.subtitle;
-      document.getElementById("detailImage").src = recipe.thumb || "";
-
-      const ing1 = document.getElementById("detailIngredientsCol1");
-      const ing2 = document.getElementById("detailIngredientsCol2");
-      ing1.innerHTML = "";
-      ing2.innerHTML = "";
-
-      const ingredients = recipe.ingredients || [];
-      const half = Math.ceil(ingredients.length / 2);
-
-      ingredients.forEach((line, i) => {
-        const li = document.createElement("li");
-        li.textContent = line;
-        if (i < half) ing1.appendChild(li);
-        else ing2.appendChild(li);
-      });
-
-      const stepsEl = document.getElementById("detailSteps");
-      stepsEl.innerHTML = "";
-      (recipe.steps || []).forEach(step => {
-        const li = document.createElement("li");
-        li.textContent = step;
-        stepsEl.appendChild(li);
-      });
+      try {
+        const res = await fetch(`./recipes/${recipe.file}`, { cache: "no-store" });
+        wrapper.innerHTML = await res.text();
+      } catch {
+        wrapper.innerHTML = `<div style="color:#aaa;">レシピファイルが見つかりません</div>`;
+      }
 
       wrapper.scrollIntoView({ behavior: "smooth" });
     }
 
     function hideDetail() {
       document.getElementById("detailWrapper").style.display = "none";
+    }
+
+    function toggleTagBar() {
+      const bar = document.getElementById("tagBar");
+      if (bar.style.display === "flex") {
+        bar.style.display = "none";
+        currentTag = null;
+        renderRecipeList();
+        return;
+      }
+
+      const tags = new Set();
+      allRecipes.forEach(r => (r.tags || []).forEach(t => tags.add(t)));
+
+      bar.innerHTML = "";
+      tags.forEach(tag => {
+        const pill = document.createElement("button");
+        pill.className = "tag-pill";
+        pill.textContent = tag;
+        pill.onclick = () => {
+          currentTag = tag;
+          currentGenre = null;
+          renderRecipeList();
+          hideDetail();
+        };
+        bar.appendChild(pill);
+      });
+
+      bar.style.display = "flex";
     }
   </script>
 </body>
