@@ -493,7 +493,7 @@
       </div>
       
       <div class="detail-footer">
-        <span class="detail-note">※ このレイアウトは「ジェネリック一蘭」レシピカード形式です。</span>
+        <span class="detail-note" style="color:var(--accent-soft); font-weight:600;">🍳 ゴリのレシピ — ジェネリック一蘭形式</span>
       </div>
     </section>
   </main>
@@ -682,13 +682,11 @@
           window.location.href = "recipes/" + recipe.file;
         });
 
-        // サムネイル用のアウター枠を生成
         const thumbWrapper = document.createElement("div");
         thumbWrapper.className = "recipe-thumb-wrapper";
 
         const imageSrc = recipe.thumb || recipe.image || "";
 
-        // 💡 画像データが存在する場合は画像を表示。ない場合は文字による代用表示
         if (imageSrc && imageSrc !== "") {
           const img = document.createElement("img");
           img.className = "recipe-thumb";
@@ -922,7 +920,6 @@
       tokenEl.addEventListener("input", () => localStorage.setItem("gh_token", tokenEl.value.trim()));
     }
 
-    // 💡 HTMLに加えて「recipe-list.json」も取得＆同期してGitHubへ同時上書き保存する関数
     async function uploadToGitHub(recipe) {
       const user = localStorage.getItem("gh_user");
       const token = localStorage.getItem("gh_token");
@@ -958,7 +955,6 @@
         if (res.ok) {
           const data = await res.json();
           jsonSha = data.sha;
-          // 現在のJSONデータをGitHubからダウンロードしてデコード
           const decodedJson = decodeURIComponent(escape(atob(data.content)));
           currentJsonData = JSON.parse(decodedJson);
         }
@@ -966,14 +962,13 @@
         console.error("JSONの取得に失敗したか、存在しません。新規作成します。", e);
       }
 
-      // JSONデータ内の該当レシピを検索（あれば上書き、なければ新規追加）
       const existingIndex = currentJsonData.findIndex(r => r.file === recipe.file);
       const jsonItem = {
         genre: recipe.genre,
         title: recipe.title,
         subtitle: recipe.subtitle,
         tags: recipe.tags,
-        thumb: recipe.thumb || "", // 💡 これでJSONファイル側にもBase64データが同期されます
+        thumb: recipe.thumb || "", 
         file: recipe.file
       };
 
@@ -988,7 +983,6 @@
 
       // --- 3. GitHubへ両ファイル同時送信 ---
       try {
-        // ① レシピHTMLのPUT
         const bodyHtml = { message: `recipe: HTML ${recipeSha ? 'Update' : 'Add'} ${recipe.title}`, content: base64Html };
         if (recipeSha) bodyHtml.sha = recipeSha;
         
@@ -1004,7 +998,6 @@
           return false;
         }
 
-        // ② recipe-list.jsonのPUT
         const bodyJson = { message: `recipe: JSON List Update for ${recipe.title}`, content: base64Json };
         if (jsonSha) bodyJson.sha = jsonSha;
 
@@ -1132,8 +1125,8 @@ body {
 .ingredients, .steps { font-size: 0.8rem; line-height: 1.5; }
 .ingredients ul, .steps ol { margin: 0.2rem 0 0; padding-left: 1.1rem; }
 .ingredients li, .steps li { margin-bottom: 0.15rem; }
-.card-footer { display: flex; justify-content: flex-end; margin-top: 0.2rem; }
-.card-note { font-size: 0.7rem; color: #aaaaaa; }
+.card-footer { display: flex; justify-content: flex-end; border-top: 1px dashed rgba(255,255,255,0.08); margin-top: 1rem; padding-top: 0.5rem; }
+.card-note { font-size: 0.75rem; color: #ff7043; font-weight: 600; }
 
 @media (max-width: 720px) {
   .card-top-row { grid-template-columns: 1fr; }
@@ -1166,7 +1159,7 @@ body {
     </div>
   </div>
   <div class="card-footer">
-    <span class="card-note">※ このレイアウトは「ジェネリック一蘭」レシピカード形式です。</span>
+    <span class="card-note">🍳 ゴリのレシピ — ジェネリック一蘭形式</span>
   </div>
 </div>
 
