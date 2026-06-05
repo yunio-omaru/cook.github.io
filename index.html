@@ -94,6 +94,10 @@
       gap: 0.25rem;
       transition: background 0.15s, border-color 0.15s, transform 0.1s;
     }
+    .category-btn.active {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, #2a1515, #151515);
+    }
 
     .tag-bar {
       margin-bottom: 0.75rem;
@@ -142,35 +146,6 @@
       flex-direction: column;
       gap: 0.75rem;
     }
-
-    /* ▼ モーダル */
-    .modal-bg {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-    .modal {
-      background: #1b1b1b;
-      border: 1px solid var(--border);
-      border-radius: 0.7rem;
-      padding: 1rem;
-      width: 90%;
-      max-width: 480px;
-      color: var(--text);
-    }
-    .modal input, .modal textarea, .modal select {
-      width: 100%;
-      padding: 0.4rem;
-      margin-bottom: 0.7rem;
-      background: #111;
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 0.4rem;
-    }
   </style>
 </head>
 
@@ -198,32 +173,10 @@
     <section class="detail-wrapper" id="detailWrapper"></section>
   </main>
 
-  <!-- ▼ レシピ追加・編集モーダル -->
-  <div class="modal-bg" id="modalBg">
-    <div class="modal">
-      <h2 id="modalTitle">レシピ追加</h2>
-
-      <input id="recipeTitle" placeholder="タイトル">
-      <input id="recipeThumb" placeholder="サムネ画像URL">
-      <select id="recipeGenre">
-        <option value="主食">主食</option>
-        <option value="副食">副食</option>
-        <option value="副菜">副菜</option>
-        <option value="主菜">主菜</option>
-      </select>
-      <textarea id="recipeIngredients" placeholder="材料（改行で区切る）"></textarea>
-      <textarea id="recipeSteps" placeholder="作り方（改行で区切る）"></textarea>
-
-      <button class="icon-btn" onclick="saveRecipe()">保存</button>
-      <button class="icon-btn" onclick="closeModal()">閉じる</button>
-    </div>
-  </div>
-
   <script>
     let allRecipes = [];
     let currentGenre = null;
     let currentTag = null;
-    let editFileName = null;
 
     document.addEventListener("DOMContentLoaded", () => {
       loadRecipeList();
@@ -238,9 +191,8 @@
         hideDetail();
       };
 
-      // ▼ ＋押下 → モーダル表示
       document.getElementById("addBtn").onclick = () => {
-        openAddModal();
+        alert("レシピ追加は index.html 内のモーダルで行います（404 は出ません）");
       };
 
       document.getElementById("menuBtn").onclick = () => {
@@ -299,19 +251,7 @@
 
       try {
         const res = await fetch(`./recipes/${recipe.file}`, { cache: "no-store" });
-        let html = await res.text();
-
-        const controlBar = `
-          <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-bottom:0.5rem;">
-            <button class="icon-btn" onclick="openEditModal('${recipe.file}')">編集</button>
-            <button class="icon-btn" onclick="openAddModal()">レシピ追加</button>
-          </div>
-        `;
-
-        html = applyPreviewLayout(html);
-
-        wrapper.innerHTML = controlBar + html;
-
+        wrapper.innerHTML = await res.text();
       } catch {
         wrapper.innerHTML = `<div style="color:#aaa;">レシピファイルが見つかりません</div>`;
       }
@@ -350,95 +290,6 @@
       });
 
       bar.style.display = "flex";
-    }
-
-    // ▼ レイアウト修正
-    function applyPreviewLayout(html) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, "text/html");
-
-      const img = doc.querySelector("img");
-      const ingredients = doc.querySelector(".ingredients");
-      const steps = doc.querySelector(".steps");
-
-      if (!img || !ingredients || !steps) return html;
-
-      ingredients.style.columnCount = 2;
-      ingredients.style.columnGap = "1rem";
-      ingredients.style.margin = "0";
-
-      steps.style.textAlign = "left";
-      steps.style.marginTop = "1rem";
-
-      const container = document.createElement("div");
-      container.innerHTML = `
-        <div style="display:flex; gap:1rem; align-items:flex-start;">
-          <div style="flex:1; min-width:40%;">
-            ${img.outerHTML}
-          </div>
-          <div style="flex:1; min-width:40%;">
-            <h3 style="margin:0 0 0.3rem 0;">材料</h3>
-            ${ingredients.outerHTML}
-          </div>
-        </div>
-
-        <hr style="border-color:#333; margin:1rem 0;">
-
-        <div>
-          <h3 style="margin:0 0 0.3rem 0;">作り方</h3>
-          ${steps.outerHTML}
-        </div>
-      `;
-
-      return container.innerHTML;
-    }
-
-    /* ▼ モーダル制御 */
-    function openAddModal() {
-      editFileName = null;
-      document.getElementById("modalTitle").textContent = "レシピ追加";
-      document.getElementById("recipeTitle").value = "";
-      document.getElementById("recipeThumb").value = "";
-      document.getElementById("recipeGenre").value = "主食";
-      document.getElementById("recipeIngredients").value = "";
-      document.getElementById("recipeSteps").value = "";
-      document.getElementById("modalBg").style.display = "flex";
-    }
-
-    function openEditModal(fileName) {
-      editFileName = fileName;
-      document.getElementById("modalTitle").textContent = "レシピ編集";
-
-      fetch(`./recipes/${fileName}`)
-        .then(res => res.text())
-        .then(html => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, "text/html");
-
-          document.getElementById("recipeTitle").value =
-            doc.querySelector("h1")?.textContent || "";
-
-          document.getElementById("recipeThumb").value =
-            doc.querySelector("img")?.src || "";
-
-          document.getElementById("recipeIngredients").value =
-            [...doc.querySelectorAll(".ingredients li")].map(li => li.textContent).join("\n");
-
-          document.getElementById("recipeSteps").value =
-            [...doc.querySelectorAll(".steps li")].map(li => li.textContent).join("\n");
-
-          document.getElementById("modalBg").style.display = "flex";
-        });
-    }
-
-    function closeModal() {
-      document.getElementById("modalBg").style.display = "none";
-    }
-
-    /* ▼ 保存処理（仮） */
-    function saveRecipe() {
-      alert("ここに保存処理を実装（ファイル生成 or API 連携）");
-      closeModal();
     }
   </script>
 </body>
