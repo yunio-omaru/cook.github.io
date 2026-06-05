@@ -23,6 +23,7 @@ body {
   background: radial-gradient(circle at top left, #2a1515 0, #050505 55%, #000 100%);
   padding: 0.9rem;
   box-sizing: border-box;
+  position: relative; /* 編集ボタンの基準点 */
 }
 .card-header {
   display: flex;
@@ -31,15 +32,36 @@ body {
   gap: 0.5rem;
   border-bottom: 1px dashed rgba(255,255,255,0.08);
   padding-bottom: 0.4rem;
+  padding-right: 4rem; /* 編集ボタンと重ならないように余白追加 */
 }
 .card-title { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.06em; }
 .card-subtitle { font-size: 0.75rem; color: #aaaaaa; }
 .card-tag { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15); color: #ff7043; }
 
-/* 💡 保存側HTML：全体をflex縦並び、上段用のcard-top-rowを追加 */
+/* 編集ボタンのスタイル */
+.edit-btn {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  border: 1px solid #333;
+  background: #151515;
+  color: #f5f5f5;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  z-index: 10;
+}
+.edit-btn:hover {
+  background: #222;
+  border-color: #ff7043;
+}
+
 .card-body { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }
 .card-top-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr); gap: 0.75rem; }
 
+/* 画像エリア（imgタグへ変更） */
 .card-image { width: 100%; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.12); object-fit: cover; background: #111; aspect-ratio: 4 / 3; }
 .section-title { font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: #aaaaaa; margin-bottom: 0.25rem; }
 .ingredients, .steps { font-size: 0.8rem; line-height: 1.5; }
@@ -47,12 +69,13 @@ body {
 .ingredients li, .steps li { margin-bottom: 0.15rem; }
 .card-footer { margin-top: 0.4rem; font-size: 0.7rem; color: #aaaaaa; text-align: right; }
 
-/* 💡 レスポンシブ時は上段も1列に並べる */
 @media (max-width: 720px) { .card-top-row { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
   <article class="card" data-genre="副菜" data-title="デリ風エッグポテトサラダ" data-subtitle="サラダ" data-tags="サラダ">
+    <button class="edit-btn" id="editRecipeBtn">編集</button>
+    
     <header class="card-header">
       <div>
         <div class="card-title">デリ風エッグポテトサラダ</div>
@@ -60,23 +83,86 @@ body {
       </div>
       <div class="card-tag">サラダ</div>
     </header>
+
     <section class="card-body">
       <div class="card-top-row">
         <div>
-          <div class="card-image" id="cardImage"></div>
+          <img class="card-image" id="cardImage" src="" alt="ポテサラ">
         </div>
         <div>
           <div class="section-title">材料</div>
-          <div class="ingredients"><ul><li>じゃがいも 3個</li><li>→ ゴロッと感を残すのがデリ感の核</li><li>卵 6個</li><li>→ “卵サラダ×ポテサラ”のハイブリッド</li><li>きゅうり 2本（薄切り）</li><li>スイートコーン 1缶</li><li>ベーコン 300g（カリカリに焼く）</li><li>ごまドレッシング 200g</li><li>ギリシャヨーグルト 200g</li><li>塩こしょう</li><li>※オリジナルスパイスは「ほりにし」などで代用OK</li></ul></div>
+          <div class="ingredients" id="ingredientsList">
+            <ul>
+              <li>じゃがいも 3個</li>
+              <li>→ ゴロッと感を残すのがデリ感の核</li>
+              <li>卵 6個</li>
+              <li>→ “卵サラダ×ポテサラ”のハイブリッド</li>
+              <li>きゅうり 2本（薄切り）</li>
+              <li>スイートコーン 1缶</li>
+              <li>ベーコン 300g（カリカリに焼く）</li>
+              <li>ごまドレッシング 200g</li>
+              <li>ギリシャヨーグルト 200g</li>
+              <li>塩こしょう</li>
+              <li>※オリジナルスパイスは「ほりにし」などで代用OK</li>
+            </ul>
+          </div>
         </div>
       </div>
       
       <div>
         <div class="section-title" style="margin-top:0.5rem;">作り方</div>
-        <div class="steps"><ol><li>① じゃがいもを加熱</li><li>皮をむいて柔らかくなるまで茹でる or レンチン。</li><li>熱いうちに軽く潰して粗熱を取る。</li><li>② ゆで卵を作る</li><li>8分茹で → 冷やして殻をむき、ざっくりカット。</li><li>③ 具材準備</li><li>きゅうり：薄切り</li><li>ベーコン：カリカリになるまで炒める</li><li>コーン：水気を切る</li><li>④ ドレッシングを作る</li><li>ごまドレ 200g</li><li>ギリシャヨーグルト 200g</li><li>→ 混ぜるだけで“濃厚なのに後味さっぱり”のデリ味に。</li><li>⑤ 全部合わせる</li><li>じゃがいも・卵・きゅうり・コーン・ベーコンを大きめボウルに。</li><li>ドレッシングを加えてざっくり混ぜる。</li><li>⑥ 盛り付け</li><li>黒胡椒をガッツリ振ると一気にデリ店の味。</li></ol></div>
+        <div class="steps" id="stepsList">
+          <ol>
+            <li>① じゃがいもを加熱</li>
+            <li>皮をむいて柔らかくなるまで茹でる or レンチン。</li>
+            <li>熱いうちに軽く潰して粗熱を取る。</li>
+            <li>② ゆで卵を作る</li>
+            <li>8分茹で → 冷やして殻をむき、ざっくりカット。</li>
+            <li>③ 具材準備</li>
+            <li>きゅうり：薄切り</li>
+            <li>ベーコン：カリカリになるまで炒める</li>
+            <li>コーン：水気を切る</li>
+            <li>④ ドレッシングを作る</li>
+            <li>ごまドレ 200g</li>
+            <li>ギリシャヨーグルト 200g</li>
+            <li>→ 混ぜるだけで“濃厚なのに後味さっぱり”のデリ味に。</li>
+            <li>⑤ 全部合わせる</li>
+            <li>じゃがいも・卵・きゅうり・コーン・ベーコンを大きめボウルに。</li>
+            <li>ドレッシングを加えてざっくり混ぜる。</li>
+            <li>⑥ 盛り付け</li>
+            <li>黒胡椒をガッツリ振ると一気にデリ店の味。</li>
+          </ol>
+        </div>
       </div>
     </section>
     <footer class="card-footer">ゴリのレシピ</footer>
   </article>
+
+  <script>
+    document.getElementById("editRecipeBtn").addEventListener("click", () => {
+      // 材料リストを取得して配列に変換
+      const ingredientElements = document.querySelectorAll("#ingredientsList li");
+      const ingredientsArray = Array.from(ingredientElements).map(el => el.textContent);
+
+      // 手順リストを取得して配列に変換
+      const stepElements = document.querySelectorAll("#stepsList li");
+      const stepsArray = Array.from(stepElements).map(el => el.textContent);
+
+      const recipeData = {
+        genre: "副菜",
+        title: "デリ風エッグポテトサラダ",
+        subtitle: "サラダ",
+        ingredients: ingredientsArray,
+        steps: stepsArray,
+        image: document.getElementById("cardImage")?.src || ""
+      };
+
+      // セッションストレージに保存
+      sessionStorage.setItem("edit_recipe_target", JSON.stringify(recipeData));
+      
+      // 編集モードでindexページへ遷移
+      window.location.href = "../index.html?mode=edit";
+    });
+  </script>
 </body>
 </html>
