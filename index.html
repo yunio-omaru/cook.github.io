@@ -157,7 +157,7 @@
       border-color: var(--accent-soft);
     }
     
-    /* サムネイル枠（比率を維持し、画像なし時の文字表示に対応） */
+    /* サムネイル枠 */
     .recipe-thumb-wrapper {
       width: 100%;
       aspect-ratio: 4 / 3;
@@ -174,7 +174,6 @@
       height: 100%;
       object-fit: cover;
     }
-    /* 画像が無いときにジャンル名を表示するプレースホルダー用スタイル */
     .recipe-thumb-placeholder {
       font-size: 1.5rem;
       font-weight: 700;
@@ -290,7 +289,8 @@
     }
     .detail-note {
       font-size: 0.7rem;
-      color: var(--muted);
+      color: var(--accent-soft);
+      font-weight: 600;
     }
 
     /* Add recipe modal */
@@ -493,7 +493,7 @@
       </div>
       
       <div class="detail-footer">
-        <span class="detail-note">※ このレイアウトは「ジェネリック一蘭」レシピカード形式です。</span>
+        <span class="detail-note" id="detailNote">🍳 ゴリのレシピ — ジェネリック一蘭形式</span>
       </div>
     </section>
   </main>
@@ -516,6 +516,8 @@
             <input type="password" class="form-input" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" />
           </div>
         </div>
+
+        <input type="hidden" id="inputOriginalFile" value="" />
 
         <div class="form-row">
           <label class="form-label">ジャンル</label>
@@ -585,6 +587,7 @@
       document.getElementById("headerHome").addEventListener("click", returnToMainMenu);
       document.getElementById("addBtn").addEventListener("click", () => {
         document.getElementById("modalTitle").textContent = "レシピ追加";
+        document.getElementById("inputOriginalFile").value = ""; 
         openAddModal();
       });
       document.getElementById("menuBtn").addEventListener("click", toggleTagBar);
@@ -682,13 +685,11 @@
           window.location.href = "recipes/" + recipe.file;
         });
 
-        // サムネイル用のアウター枠を生成
         const thumbWrapper = document.createElement("div");
         thumbWrapper.className = "recipe-thumb-wrapper";
 
         const imageSrc = recipe.thumb || recipe.image || "";
 
-        // 💡 画像データが存在する場合は画像を表示。ない場合は文字による代用表示
         if (imageSrc && imageSrc !== "") {
           const img = document.createElement("img");
           img.className = "recipe-thumb";
@@ -845,6 +846,7 @@
         document.getElementById("inputIngredients").value = "";
         document.getElementById("inputSteps").value = "";
         document.getElementById("inputImage").value = "";
+        document.getElementById("inputOriginalFile").value = ""; 
         currentPreviewData = null;
       }
     }
@@ -856,6 +858,7 @@
       const ingredientsText = document.getElementById("inputIngredients").value;
       const stepsText = document.getElementById("inputSteps").value;
       const fileInput = document.getElementById("inputImage");
+      const originalFile = document.getElementById("inputOriginalFile").value.trim();
 
       if (!title) {
         alert("タイトルは必須です。");
@@ -873,6 +876,9 @@
         imageData = currentPreviewData.image;
       }
 
+      // 💡 元データにfile名があれば引き継ぎ、なければタイトルから新規生成
+      const targetFile = originalFile ? originalFile : (safeFileName(title) + ".html");
+
       return {
         genre,
         title,
@@ -882,7 +888,7 @@
         steps,
         image: imageData,
         thumb: imageData,
-        file: safeFileName(title) + ".html",
+        file: targetFile,
       };
     }
 
@@ -922,7 +928,6 @@
       tokenEl.addEventListener("input", () => localStorage.setItem("gh_token", tokenEl.value.trim()));
     }
 
-    // 💡 HTMLに加えて「recipe-list.json」も取得＆同期してGitHubへ同時上書き保存する関数
     async function uploadToGitHub(recipe) {
       const user = localStorage.getItem("gh_user");
       const token = localStorage.getItem("gh_token");
@@ -954,33 +959,32 @@
       let currentJsonData = [];
       
       try {
-        const res = await fetch(jsonUrl, { headers: { "Authorization": `token ${token}` } });
+        const res = await fetch(jsonUrl, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           jsonSha = data.sha;
-          // 現在のJSONデータをGitHubからダウンロードしてデコード
           const decodedJson = decodeURIComponent(escape(atob(data.content)));
           currentJsonData = JSON.parse(decodedJson);
         }
       } catch (e) {
-        console.error("JSONの取得に失敗したか、存在しません。新規作成します。", e);
+        console.error("JSONの取得に失敗しました。新規作成します。", e);
       }
 
-      // JSONデータ内の該当レシピを検索（あれば上書き、なければ新規追加）
+      // 💡 既存のJSONデータ全体を維持しつつ、同じfile名のレシピだけを上書き
       const existingIndex = currentJsonData.findIndex(r => r.file === recipe.file);
       const jsonItem = {
         genre: recipe.genre,
         title: recipe.title,
         subtitle: recipe.subtitle,
         tags: recipe.tags,
-        thumb: recipe.thumb || "", // 💡 これでJSONファイル側にもBase64データが同期されます
+        thumb: recipe.thumb || "", 
         file: recipe.file
       };
 
       if (existingIndex >= 0) {
-        currentJsonData[existingIndex] = jsonItem;
+        currentJsonData[existingIndex] = jsonItem; // 既存の一要素のみ更新
       } else {
-        currentJsonData.push(jsonItem);
+        currentJsonData.push(jsonItem); // なければ新規追加
       }
 
       const updatedJsonText = JSON.stringify(currentJsonData, null, 2);
@@ -988,7 +992,6 @@
 
       // --- 3. GitHubへ両ファイル同時送信 ---
       try {
-        // ① レシピHTMLのPUT
         const bodyHtml = { message: `recipe: HTML ${recipeSha ? 'Update' : 'Add'} ${recipe.title}`, content: base64Html };
         if (recipeSha) bodyHtml.sha = recipeSha;
         
@@ -1004,7 +1007,6 @@
           return false;
         }
 
-        // ② recipe-list.jsonのPUT
         const bodyJson = { message: `recipe: JSON List Update for ${recipe.title}`, content: base64Json };
         if (jsonSha) bodyJson.sha = jsonSha;
 
@@ -1043,8 +1045,11 @@
           document.getElementById("inputIngredients").value = (recipe.ingredients || []).join("\n");
           document.getElementById("inputSteps").value = (recipe.steps || []).join("\n");
           
+          // 💡 隠しフィールドに元のファイル名をセットする
+          document.getElementById("inputOriginalFile").value = recipe.file || "";
+          
           if (recipe.image && !recipe.image.startsWith(window.location.origin)) {
-            currentPreviewData = { image: recipe.image, thumb: recipe.image };
+            currentPreviewData = { image: recipe.image, thumb: recipe.image, file: recipe.file || "" };
           }
 
           document.getElementById("modalTitle").textContent = "レシピ編集";
@@ -1062,7 +1067,6 @@
     function buildRecipeCardHtml(recipe) {
       const ingList = (recipe.ingredients || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("");
       const stepList = (recipe.steps || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("");
-      const tagsText = (recipe.tags || []).join(", ");
       const rawIngredients = JSON.stringify(recipe.ingredients || []);
       const rawSteps = JSON.stringify(recipe.steps || []);
 
@@ -1132,8 +1136,8 @@ body {
 .ingredients, .steps { font-size: 0.8rem; line-height: 1.5; }
 .ingredients ul, .steps ol { margin: 0.2rem 0 0; padding-left: 1.1rem; }
 .ingredients li, .steps li { margin-bottom: 0.15rem; }
-.card-footer { display: flex; justify-content: flex-end; margin-top: 0.2rem; }
-.card-note { font-size: 0.7rem; color: #aaaaaa; }
+.card-footer { display: flex; justify-content: flex-end; border-top: 1px dashed rgba(255,255,255,0.08); margin-top: 1rem; padding-top: 0.5rem; }
+.card-note { font-size: 0.75rem; color: #ff7043; font-weight: 600; }
 
 @media (max-width: 720px) {
   .card-top-row { grid-template-columns: 1fr; }
@@ -1172,13 +1176,18 @@ body {
 
 <script>
 document.getElementById("editBtn").addEventListener("click", () => {
+  // 💡 URLの末尾から、自身の現在のHTMLファイル名（例: raw-ramen.html）を逆算して抽出
+  const pathParts = window.location.pathname.split('/');
+  const currentFileName = pathParts[pathParts.length - 1] || "recipe.html";
+
   const target = {
     genre: ${JSON.stringify(recipe.genre)},
     title: ${JSON.stringify(recipe.title)},
     subtitle: ${JSON.stringify(recipe.subtitle)},
     ingredients: ${rawIngredients},
     steps: ${rawSteps},
-    image: ${JSON.stringify(recipe.image)}
+    image: ${JSON.stringify(recipe.image)},
+    file: currentFileName // 💡 確実に既存ファイル名を渡して上書きさせる
   };
   sessionStorage.setItem("edit_recipe_target", JSON.stringify(target));
   window.location.href = "../index.html?mode=edit";
