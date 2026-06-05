@@ -178,7 +178,7 @@
       text-overflow: ellipsis;
     }
 
-    /* Detail area (ジェネリック一蘭カード) */
+    /* Detail area */
     .detail-wrapper {
       border-radius: 0.9rem;
       border: 1px solid var(--border);
@@ -340,7 +340,7 @@
     }
     .modal-footer {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
       margin-top: 0.5rem;
       gap: 0.5rem;
@@ -372,17 +372,6 @@
       padding: 0.3rem 0.8rem;
       font-size: 0.75rem;
       cursor: pointer;
-    }
-    .snippet-area {
-      width: 100%;
-      font-size: 0.7rem;
-      background: #050505;
-      color: var(--muted);
-      border-radius: 0.5rem;
-      border: 1px solid var(--border);
-      padding: 0.4rem;
-      resize: vertical;
-      min-height: 60px;
     }
 
     @media (max-width: 720px) {
@@ -427,7 +416,7 @@
     <section class="detail-wrapper" id="detailWrapper">
       <div class="preview-actions" id="previewActions">
         <button class="secondary-btn" id="previewEditBtn">編集</button>
-        <button class="primary-btn" id="previewSubmitBtn">レシピ登録</button>
+        <button class="primary-btn" id="previewSubmitBtn">レシピ保存</button>
       </div>
 
       <div class="detail-header">
@@ -501,21 +490,15 @@
         <button class="secondary-btn" id="previewBtn">プレビュー</button>
         <button class="primary-btn" id="downloadBtn">レシピHTMLを保存</button>
       </div>
-      <div style="margin-top:0.5rem;">
-        <div class="form-label">recipe-list.json 用スニペット（手動で追記）</div>
-        <textarea class="snippet-area" id="jsonSnippet" readonly></textarea>
-      </div>
     </div>
   </div>
 
   <script>
-    // ====== 状態 ======
     let allRecipes = []; 
     let currentGenre = null;
     let currentTag = null;
     let currentPreviewData = null;
 
-    // ====== 初期化 ======
     document.addEventListener("DOMContentLoaded", () => {
       setupHeader();
       setupCategories();
@@ -524,7 +507,6 @@
       loadRecipeList();
     });
 
-    // ====== メインメニュー（トップ画面）に戻る共通処理 ======
     function returnToMainMenu() {
       currentGenre = null;
       currentTag = null;
@@ -534,22 +516,12 @@
       hideDetail();
     }
 
-    // ====== ヘッダー ======
     function setupHeader() {
-      document.getElementById("headerHome").addEventListener("click", () => {
-        returnToMainMenu();
-      });
-
-      document.getElementById("addBtn").addEventListener("click", () => {
-        openAddModal();
-      });
-
-      document.getElementById("menuBtn").addEventListener("click", () => {
-        toggleTagBar();
-      });
+      document.getElementById("headerHome").addEventListener("click", returnToMainMenu);
+      document.getElementById("addBtn").addEventListener("click", openAddModal);
+      document.getElementById("menuBtn").addEventListener("click", toggleTagBar);
     }
 
-    // ====== カテゴリ ======
     function setupCategories() {
       const row = document.getElementById("categoryRow");
       row.addEventListener("click", (e) => {
@@ -557,6 +529,12 @@
         if (!btn) return;
         const genre = btn.dataset.genre;
         if (!genre) return;
+        
+        if (btn.classList.contains("active")) {
+          returnToMainMenu();
+          return;
+        }
+
         currentGenre = genre;
         currentTag = null;
         clearActiveCategories();
@@ -570,7 +548,6 @@
       document.querySelectorAll(".category-btn").forEach((b) => b.classList.remove("active"));
     }
 
-    // ====== タグバー ======
     function toggleTagBar() {
       const bar = document.getElementById("tagBar");
       if (bar.style.display === "flex") {
@@ -601,7 +578,6 @@
       bar.style.display = tags.size ? "flex" : "none";
     }
 
-    // ====== recipe-list.json 読み込み ======
     async function loadRecipeList() {
       try {
         const res = await fetch("recipe-list.json", { cache: "no-store" });
@@ -614,7 +590,6 @@
       renderRecipeList();
     }
 
-    // ====== レシピ一覧描画 ======
     function renderRecipeList() {
       const listEl = document.getElementById("recipeList");
       listEl.innerHTML = "";
@@ -627,10 +602,17 @@
         filtered = filtered.filter((r) => (r.tags || []).includes(currentTag));
       }
 
+      if (filtered.length === 0) {
+        listEl.innerHTML = '<div style="color:var(--muted); font-size:0.8rem; padding:1rem;">レシピがまだありません。</div>';
+        return;
+      }
+
       filtered.forEach((recipe) => {
         const card = document.createElement("article");
         card.className = "recipe-card-mini";
-        card.addEventListener("click", () => openDetail(recipe, false));
+        card.addEventListener("click", () => {
+          window.location.href = "recipes/" + recipe.file;
+        });
 
         const img = document.createElement("img");
         img.className = "recipe-thumb";
@@ -656,17 +638,7 @@
       });
     }
 
-    // ====== レシピ詳細（ジェネリック一蘭カード） ======
     async function openDetail(recipe, isPreview = false) {
-      if (recipe.file && !isPreview) {
-        try {
-          const res = await fetch("recipes/" + recipe.file, { cache: "no-store" });
-          if (res.ok) {
-            const html = await res.text();
-          }
-        } catch (e) {}
-      }
-
       const wrapper = document.getElementById("detailWrapper");
       const titleEl = document.getElementById("detailTitle");
       const subEl = document.getElementById("detailSubtitle");
@@ -715,7 +687,6 @@
       currentPreviewData = null;
     }
 
-    // ====== プレビュー画面の右上ボタン ======
     function setupPreviewActions() {
       document.getElementById("previewEditBtn").addEventListener("click", () => {
         hideDetail();
@@ -724,46 +695,30 @@
 
       document.getElementById("previewSubmitBtn").addEventListener("click", () => {
         if (!currentPreviewData) return;
-        generateJsonSnippet(currentPreviewData);
         downloadRecipeHtml(currentPreviewData);
-        
         closeAddModal(true); 
-        returnToMainMenu(); // メインメニューへ戻る
+        returnToMainMenu();
       });
     }
 
-    // ====== レシピ追加モーダル ======
     function setupAddModal() {
       const backdrop = document.getElementById("addModalBackdrop");
       const closeBtn = document.getElementById("addModalClose");
       
-      // ×ボタンを押した時の処理
-      closeBtn.addEventListener("click", () => {
+      const handleClose = () => {
         if (isFormDirty()) {
           if (confirm("入力中の内容があります。保存せず終了してOK？")) {
             closeAddModal();
-            returnToMainMenu(); // 【変更】OKの時はメインメニューに戻る
+            returnToMainMenu();
           }
         } else {
           closeAddModal();
-          returnToMainMenu();   // 【変更】何も入力がない時もメインメニューに戻る
+          returnToMainMenu();
         }
-      });
-      
-      // 背景（ポップアップ外）を押した時の処理
-      backdrop.addEventListener("click", (e) => {
-        if (e.target === backdrop) {
-          if (isFormDirty()) {
-            if (confirm("入力中の内容があります。保存せず終了してOK？")) {
-              closeAddModal();
-              returnToMainMenu(); // 【変更】OKの時はメインメニューに戻る
-            }
-          } else {
-            closeAddModal();
-            returnToMainMenu();   // 【変更】何も入力がない時もメインメニューに戻る
-          }
-        }
-      });
+      };
+
+      closeBtn.addEventListener("click", handleClose);
+      backdrop.addEventListener("click", (e) => { if (e.target === backdrop) handleClose(); });
 
       document.getElementById("previewBtn").addEventListener("click", async () => {
         const recipe = await collectRecipeFromForm();
@@ -775,7 +730,6 @@
       document.getElementById("downloadBtn").addEventListener("click", async () => {
         const recipe = await collectRecipeFromForm();
         if (!recipe) return;
-        generateJsonSnippet(recipe);
         downloadRecipeHtml(recipe);
       });
     }
@@ -786,11 +740,7 @@
       const ingredients = document.getElementById("inputIngredients").value.trim();
       const steps = document.getElementById("inputSteps").value.trim();
       const fileInput = document.getElementById("inputImage");
-
-      if (title || subtitle || ingredients || steps || (fileInput.files && fileInput.files.length > 0)) {
-        return true;
-      }
-      return false;
+      return !!(title || subtitle || ingredients || steps || (fileInput.files && fileInput.files.length > 0));
     }
 
     function openAddModal() {
@@ -805,7 +755,6 @@
         document.getElementById("inputIngredients").value = "";
         document.getElementById("inputSteps").value = "";
         document.getElementById("inputImage").value = "";
-        document.getElementById("jsonSnippet").value = "";
       }
     }
 
@@ -848,7 +797,7 @@
 
     function readFileAsDataURL(file) {
       return new Promise((resolve, reject) => {
-        const reader = new FileReader();
+        const声明 reader = new FileReader();
         reader.onload = (e) => resolve(e.target.result);
         reader.onerror = (e) => reject(e);
         reader.readAsDataURL(file);
@@ -859,24 +808,6 @@
       return title.replace(/[\\\/:*?"<>|]/g, "_").trim() || "recipe";
     }
 
-    // ====== recipe-list.json 用スニペット ======
-    function generateJsonSnippet(recipe) {
-      const snippet = {
-        genre: recipe.genre,
-        title: recipe.title,
-        subtitle: recipe.subtitle,
-        tags: recipe.tags,
-        thumb: recipe.thumb ? `recipes/${recipe.file}` : "",
-        file: recipe.file,
-      };
-      const text =
-        "// recipe-list.json に配列要素として追加\n" +
-        JSON.stringify(snippet, null, 2) +
-        ",";
-      document.getElementById("jsonSnippet").value = text;
-    }
-
-    // ====== レシピカードHTML生成＆ダウンロード ======
     function downloadRecipeHtml(recipe) {
       const html = buildRecipeCardHtml(recipe);
       const blob = new Blob([html], { type: "text/html" });
@@ -888,7 +819,7 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      alert("レシピHTMLを保存しました。\nGitHub の recipes フォルダにアップロードしてください。");
+      alert("レシピHTMLを保存しました。\nGitHubの recipes フォルダにアップロードしてください。");
     }
 
     function buildRecipeCardHtml(recipe) {
@@ -896,6 +827,7 @@
       const stepList = (recipe.steps || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("");
       const tagsText = (recipe.tags || []).join(", ");
 
+      // 自動抽出スクリプト用に、articleタグにメタデータを仕込みます
       return `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -944,7 +876,7 @@ body {
 </style>
 </head>
 <body>
-  <article class="card">
+  <article class="card" data-genre="${escapeHtml(recipe.genre)}" data-title="${escapeHtml(recipe.title)}" data-subtitle="${escapeHtml(recipe.subtitle || "")}" data-tags="${escapeHtml(tagsText)}">
     <header class="card-header">
       <div>
         <div class="card-title">${escapeHtml(recipe.title)}</div>
@@ -956,8 +888,8 @@ body {
       <div>
         ${
           recipe.image
-            ? `<img src="${recipe.image}" alt="レシピ画像" class="card-image" />`
-            : `<div class="card-image"></div>`
+            ? `<img src="${recipe.image}" id="cardImage" alt="レシピ画像" class="card-image" />`
+            : `<div class="card-image" id="cardImage"></div>`
         }
       </div>
       <div>
@@ -974,12 +906,7 @@ body {
     }
 
     function escapeHtml(str) {
-      return String(str || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+      return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
   </script>
 </body>
