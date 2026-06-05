@@ -1,0 +1,68 @@
+name: Generate Recipe List JSON
+
+on:
+  push:
+    paths:
+      - 'recipes/**.html'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/node-current@v4
+
+      - name: Generate JSON from HTML files
+        run: |
+          node -e '
+          const fs = require("fs");
+          const path = require("path");
+          
+          const recipesDir = "recipes";
+          if (!fs.existsSync(recipesDir)) {
+            fs.writeFileSync("recipe-list.json", "[]");
+            process.exit(0);
+          }
+          
+          const files = fs.readdirSync(recipesDir).filter(f => f.endsWith(".html"));
+          const list = [];
+          
+          files.forEach(file => {
+            const filePath = path.join(recipesDir, file);
+            const html = fs.readFileSync(filePath, "utf8");
+            
+            // 各種メタデータの抽出 (独自のdata-*属性を埋め込んでおき、そこから抽出します)
+            const genreMatch = html.match(/data-genre="([^"]+)"/);
+            const titleMatch = html.match(/data-title="([^"]+)"/);
+            const subtitleMatch = html.match(/data-subtitle="([^"]+)"/);
+            const tagsMatch = html.match(/data-tags="([^"]+)"/);
+            const thumbMatch = html.match(/<img[^>]*id="cardImage"[^>]*src="([^"]+)"/);
+            
+            if (titleMatch) {
+              list.push({
+                genre: genreMatch ? genreMatch[1] : "主食",
+                title: titleMatch[1],
+                subtitle: subtitleMatch ? subtitleMatch[1] : "",
+                tags: tagsMatch ? tagsMatch[1].split(",").map(t => t.trim()).filter(t => t) : [],
+                thumb: thumbMatch ? thumbMatch[1] : "",
+                file: file
+              });
+            }
+          });
+          
+          fs.writeFileSync("recipe-list.json", JSON.stringify(list, null, 2));
+          '
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add recipe-list.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: Auto-generate recipe-list.json" && git push)
