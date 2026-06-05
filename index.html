@@ -187,7 +187,16 @@
       display: none;
       flex-direction: column;
       gap: 0.75rem;
+      position: relative;
     }
+    
+    .preview-actions {
+      display: none;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-bottom: -0.25rem;
+    }
+
     .detail-header {
       display: flex;
       justify-content: space-between;
@@ -396,7 +405,6 @@
   </header>
 
   <main>
-    <!-- Category row -->
     <div class="category-row" id="categoryRow">
       <button class="category-btn" data-genre="主食">
         <span>▼</span><span>主食</span>
@@ -412,14 +420,16 @@
       </button>
     </div>
 
-    <!-- Tag bar (≡) -->
     <div class="tag-bar" id="tagBar"></div>
 
-    <!-- Recipe list -->
     <div class="recipe-list" id="recipeList"></div>
 
-    <!-- Detail area (ジェネリック一蘭カード) -->
     <section class="detail-wrapper" id="detailWrapper">
+      <div class="preview-actions" id="previewActions">
+        <button class="secondary-btn" id="previewEditBtn">編集</button>
+        <button class="primary-btn" id="previewSubmitBtn">レシピ登録</button>
+      </div>
+
       <div class="detail-header">
         <div>
           <div class="detail-title" id="detailTitle"></div>
@@ -448,7 +458,6 @@
     </section>
   </main>
 
-  <!-- Add recipe modal -->
   <div class="modal-backdrop" id="addModalBackdrop">
     <div class="modal">
       <div class="modal-header">
@@ -501,27 +510,34 @@
 
   <script>
     // ====== 状態 ======
-    let allRecipes = []; // recipe-list.json から読み込む前提
+    let allRecipes = []; 
     let currentGenre = null;
     let currentTag = null;
+    let currentPreviewData = null;
 
     // ====== 初期化 ======
     document.addEventListener("DOMContentLoaded", () => {
       setupHeader();
       setupCategories();
       setupAddModal();
+      setupPreviewActions();
       loadRecipeList();
     });
+
+    // ====== メインメニュー（トップ画面）に戻る共通処理 ======
+    function returnToMainMenu() {
+      currentGenre = null;
+      currentTag = null;
+      clearActiveCategories();
+      document.getElementById("tagBar").style.display = "none";
+      renderRecipeList();
+      hideDetail();
+    }
 
     // ====== ヘッダー ======
     function setupHeader() {
       document.getElementById("headerHome").addEventListener("click", () => {
-        currentGenre = null;
-        currentTag = null;
-        clearActiveCategories();
-        document.getElementById("tagBar").style.display = "none";
-        renderRecipeList();
-        hideDetail();
+        returnToMainMenu();
       });
 
       document.getElementById("addBtn").addEventListener("click", () => {
@@ -564,7 +580,6 @@
         hideDetail();
         return;
       }
-      // タグ一覧生成
       const tags = new Set();
       allRecipes.forEach((r) => {
         (r.tags || []).forEach((t) => tags.add(t));
@@ -615,7 +630,7 @@
       filtered.forEach((recipe) => {
         const card = document.createElement("article");
         card.className = "recipe-card-mini";
-        card.addEventListener("click", () => openDetail(recipe));
+        card.addEventListener("click", () => openDetail(recipe, false));
 
         const img = document.createElement("img");
         img.className = "recipe-thumb";
@@ -642,19 +657,14 @@
     }
 
     // ====== レシピ詳細（ジェネリック一蘭カード） ======
-    async function openDetail(recipe) {
-      // recipe.file に HTML ファイル名が入っている想定
-      if (recipe.file) {
+    async function openDetail(recipe, isPreview = false) {
+      if (recipe.file && !isPreview) {
         try {
           const res = await fetch("recipes/" + recipe.file, { cache: "no-store" });
           if (res.ok) {
             const html = await res.text();
-            // 生成済みHTMLをそのまま表示したい場合はここで iframe 等に入れてもOK
-            // ここでは JSON 情報を優先してカードを描画するので、html は使わない
           }
-        } catch (e) {
-          // 無視
-        }
+        } catch (e) {}
       }
 
       const wrapper = document.getElementById("detailWrapper");
@@ -664,6 +674,15 @@
       const imgEl = document.getElementById("detailImage");
       const ingEl = document.getElementById("detailIngredients");
       const stepsEl = document.getElementById("detailSteps");
+      const actionsEl = document.getElementById("previewActions");
+
+      if (isPreview) {
+        actionsEl.style.display = "flex";
+        currentPreviewData = recipe;
+      } else {
+        actionsEl.style.display = "none";
+        currentPreviewData = null;
+      }
 
       titleEl.textContent = recipe.title || "";
       subEl.textContent = recipe.subtitle || "";
@@ -692,22 +711,65 @@
 
     function hideDetail() {
       document.getElementById("detailWrapper").style.display = "none";
+      document.getElementById("previewActions").style.display = "none";
+      currentPreviewData = null;
+    }
+
+    // ====== プレビュー画面の右上ボタン ======
+    function setupPreviewActions() {
+      document.getElementById("previewEditBtn").addEventListener("click", () => {
+        hideDetail();
+        openAddModal();
+      });
+
+      document.getElementById("previewSubmitBtn").addEventListener("click", () => {
+        if (!currentPreviewData) return;
+        generateJsonSnippet(currentPreviewData);
+        downloadRecipeHtml(currentPreviewData);
+        
+        closeAddModal(true); 
+        returnToMainMenu(); // メインメニューへ戻る
+      });
     }
 
     // ====== レシピ追加モーダル ======
     function setupAddModal() {
       const backdrop = document.getElementById("addModalBackdrop");
       const closeBtn = document.getElementById("addModalClose");
-      closeBtn.addEventListener("click", closeAddModal);
+      
+      // ×ボタンを押した時の処理
+      closeBtn.addEventListener("click", () => {
+        if (isFormDirty()) {
+          if (confirm("入力中の内容があります。保存せず終了してOK？")) {
+            closeAddModal();
+            returnToMainMenu(); // 【変更】OKの時はメインメニューに戻る
+          }
+        } else {
+          closeAddModal();
+          returnToMainMenu();   // 【変更】何も入力がない時もメインメニューに戻る
+        }
+      });
+      
+      // 背景（ポップアップ外）を押した時の処理
       backdrop.addEventListener("click", (e) => {
-        if (e.target === backdrop) closeAddModal();
+        if (e.target === backdrop) {
+          if (isFormDirty()) {
+            if (confirm("入力中の内容があります。保存せず終了してOK？")) {
+              closeAddModal();
+              returnToMainMenu(); // 【変更】OKの時はメインメニューに戻る
+            }
+          } else {
+            closeAddModal();
+            returnToMainMenu();   // 【変更】何も入力がない時もメインメニューに戻る
+          }
+        }
       });
 
       document.getElementById("previewBtn").addEventListener("click", async () => {
         const recipe = await collectRecipeFromForm();
         if (!recipe) return;
-        openDetail(recipe);
-        closeAddModal(false);
+        openDetail(recipe, true);
+        closeAddModal(false); 
       });
 
       document.getElementById("downloadBtn").addEventListener("click", async () => {
@@ -716,6 +778,19 @@
         generateJsonSnippet(recipe);
         downloadRecipeHtml(recipe);
       });
+    }
+
+    function isFormDirty() {
+      const title = document.getElementById("inputTitle").value.trim();
+      const subtitle = document.getElementById("inputSubtitle").value.trim();
+      const ingredients = document.getElementById("inputIngredients").value.trim();
+      const steps = document.getElementById("inputSteps").value.trim();
+      const fileInput = document.getElementById("inputImage");
+
+      if (title || subtitle || ingredients || steps || (fileInput.files && fileInput.files.length > 0)) {
+        return true;
+      }
+      return false;
     }
 
     function openAddModal() {
@@ -747,22 +822,15 @@
         return null;
       }
 
-      const ingredients = ingredientsText
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l);
-      const steps = stepsText
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l);
-      const tags = subtitle
-        .split(",")
-        .map((t) => t.trim())
-        .filter((t) => t);
+      const ingredients = ingredientsText.split("\n").map((l) => l.trim()).filter((l) => l);
+      const steps = stepsText.split("\n").map((l) => l.trim()).filter((l) => l);
+      const tags = subtitle.split(",").map((t) => t.trim()).filter((t) => t);
 
       let imageData = "";
       if (fileInput.files && fileInput.files[0]) {
         imageData = await readFileAsDataURL(fileInput.files[0]);
+      } else if (currentPreviewData && currentPreviewData.image) {
+        imageData = currentPreviewData.image;
       }
 
       return {
@@ -824,12 +892,8 @@
     }
 
     function buildRecipeCardHtml(recipe) {
-      const ingList = (recipe.ingredients || [])
-        .map((l) => `<li>${escapeHtml(l)}</li>`)
-        .join("");
-      const stepList = (recipe.steps || [])
-        .map((l) => `<li>${escapeHtml(l)}</li>`)
-        .join("");
+      const ingList = (recipe.ingredients || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("");
+      const stepList = (recipe.steps || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("");
       const tagsText = (recipe.tags || []).join(", ");
 
       return `<!DOCTYPE html>
@@ -866,65 +930,17 @@ body {
   border-bottom: 1px dashed rgba(255,255,255,0.08);
   padding-bottom: 0.4rem;
 }
-.card-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-.card-subtitle {
-  font-size: 0.75rem;
-  color: #aaaaaa;
-}
-.card-tag {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.15);
-  color: #ff7043;
-}
-.card-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr);
-  gap: 0.75rem;
-  margin-top: 0.75rem;
-}
-.card-image {
-  width: 100%;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255,255,255,0.12);
-  object-fit: cover;
-  background: #111;
-  aspect-ratio: 4 / 3;
-}
-.section-title {
-  font-size: 0.8rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #aaaaaa;
-  margin-bottom: 0.25rem;
-}
-.ingredients, .steps {
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-.ingredients ul, .steps ol {
-  margin: 0.2rem 0 0;
-  padding-left: 1.1rem;
-}
-.ingredients li, .steps li {
-  margin-bottom: 0.15rem;
-}
-.card-footer {
-  margin-top: 0.4rem;
-  font-size: 0.7rem;
-  color: #aaaaaa;
-  text-align: right;
-}
-@media (max-width: 720px) {
-  .card-body {
-    grid-template-columns: 1fr;
-  }
-}
+.card-title { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.06em; }
+.card-subtitle { font-size: 0.75rem; color: #aaaaaa; }
+.card-tag { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15); color: #ff7043; }
+.card-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr); gap: 0.75rem; margin-top: 0.75rem; }
+.card-image { width: 100%; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.12); object-fit: cover; background: #111; aspect-ratio: 4 / 3; }
+.section-title { font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: #aaaaaa; margin-bottom: 0.25rem; }
+.ingredients, .steps { font-size: 0.8rem; line-height: 1.5; }
+.ingredients ul, .steps ol { margin: 0.2rem 0 0; padding-left: 1.1rem; }
+.ingredients li, .steps li { margin-bottom: 0.15rem; }
+.card-footer { margin-top: 0.4rem; font-size: 0.7rem; color: #aaaaaa; text-align: right; }
+@media (max-width: 720px) { .card-body { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -946,18 +962,12 @@ body {
       </div>
       <div>
         <div class="section-title">材料</div>
-        <div class="ingredients">
-          <ul>${ingList}</ul>
-        </div>
+        <div class="ingredients"><ul>${ingList}</ul></div>
         <div class="section-title" style="margin-top:0.5rem;">作り方</div>
-        <div class="steps">
-          <ol>${stepList}</ol>
-        </div>
+        <div class="steps"><ol>${stepList}</ol></div>
       </div>
     </section>
-    <footer class="card-footer">
-      ゴリのレシピ
-    </footer>
+    <footer class="card-footer">ゴリのレシピ</footer>
   </article>
 </body>
 </html>`;
