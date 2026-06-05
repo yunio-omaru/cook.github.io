@@ -212,62 +212,107 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* add modal */
+    #addModalBackdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    #addModal {
+      background: #1a1a1a;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      width: min(90%, 600px);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-row {
+      margin-bottom: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .modal-row label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .modal-row input,
+    .modal-row textarea {
+      width: 100%;
+      padding: 0.4rem;
+      border-radius: 0.4rem;
+      border: 1px solid var(--border);
+      background: #111;
+      color: var(--text);
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .modal-btn {
+      padding: 0.4rem 0.8rem;
+      border-radius: 0.4rem;
+      border: 1px solid var(--border);
+      background: #151515;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .modal-btn:hover {
+      background: #222;
+    }
   </style>
 </head>
 
 <body>
-  <header>
-    <div class="header-title" id="headerHome">ゴリのレシピ</div>
-    <div class="header-actions">
-      <button class="icon-btn" id="addBtn">＋</button>
-      <button class="icon-btn" id="menuBtn">≡</button>
+  <!-- レシピ追加モーダル -->
+  <div id="addModalBackdrop">
+    <div id="addModal">
+      <h2 style="margin-top:0;">レシピ追加</h2>
+
+      <div class="modal-row">
+        <label>ジャンル</label>
+        <input id="inputGenre" placeholder="主食 / 副食 / 副菜 / 主菜" />
+      </div>
+
+      <div class="modal-row">
+        <label>タイトル</label>
+        <input id="inputTitle" placeholder="例：牛丼" />
+      </div>
+
+      <div class="modal-row">
+        <label>サブタイトル</label>
+        <input id="inputSubtitle" placeholder="例：甘辛タレでご飯が進む" />
+      </div>
+
+      <div class="modal-row">
+        <label>材料（1行につき1つ）</label>
+        <textarea id="inputIngredients" rows="5" placeholder="牛肉 200g&#10;玉ねぎ 1個&#10;醤油 大さじ2"></textarea>
+      </div>
+
+      <div class="modal-row">
+        <label>作り方（1行につき1工程）</label>
+        <textarea id="inputSteps" rows="6" placeholder="玉ねぎを切る&#10;牛肉を炒める&#10;調味料を入れて煮る"></textarea>
+      </div>
+
+      <div class="modal-row">
+        <label>画像URL（任意）</label>
+        <input id="inputImage" placeholder="https://example.com/photo.jpg" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn" id="cancelAddBtn">キャンセル</button>
+        <button class="modal-btn" id="saveAddBtn">保存（HTMLダウンロード）</button>
+      </div>
     </div>
-  </header>
-
-  <main>
-    <div class="category-row" id="categoryRow">
-      <button class="category-btn" data-genre="主食">▼ 主食</button>
-      <button class="category-btn" data-genre="副食">▼ 副食</button>
-      <button class="category-btn" data-genre="副菜">▼ 副菜</button>
-      <button class="category-btn" data-genre="主菜">▼ 主菜</button>
-    </div>
-
-    <div class="tag-bar" id="tagBar"></div>
-
-    <div class="recipe-list" id="recipeList"></div>
-
-    <!-- detail -->
-    <section class="detail-wrapper" id="detailWrapper">
-      <div class="detail-header">
-        <div>
-          <div class="detail-title" id="detailTitle"></div>
-          <div class="detail-subtitle" id="detailSubtitle"></div>
-        </div>
-
-        <div class="detail-actions">
-          <button class="detail-btn" id="editRecipeBtn">編集</button>
-          <button class="detail-btn" id="addNewRecipeBtn">レシピ追加</button>
-        </div>
-      </div>
-
-      <div class="detail-top">
-        <img id="detailImage" class="detail-image" alt="レシピ画像" />
-
-        <div class="detail-ingredients">
-          <div class="detail-section-title">材料</div>
-          <div class="ingredients-columns">
-            <ul id="detailIngredientsCol1"></ul>
-            <ul id="detailIngredientsCol2"></ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="detail-bottom">
-        <div class="detail-section-title">作り方</div>
-        <ol id="detailSteps"></ol>
-      </div>
-    </section>
-  </main>
+  </div>
 
   <script>
     let allRecipes = [];
@@ -280,6 +325,7 @@
       loadRecipeList();
       setupUI();
       setupEditingGuard();
+      setupAddModal();
     });
 
     function setupUI() {
@@ -293,7 +339,7 @@
 
       document.getElementById("addBtn").onclick = () => {
         if (!confirmEditing()) return;
-        alert("レシピ追加は add.html ではなく、このアプリ内のモーダルで行います。");
+        openAddModal();
       };
 
       document.getElementById("menuBtn").onclick = () => {
@@ -412,19 +458,18 @@
         document.getElementById("inputSubtitle").value = r.subtitle;
         document.getElementById("inputIngredients").value = r.ingredients.join("\n");
         document.getElementById("inputSteps").value = r.steps.join("\n");
+        document.getElementById("inputImage").value = r.thumb || "";
 
         isEditing = true;
-        alert("編集モードに戻りました（モーダルUIはあなたの add.html に合わせて実装してください）");
+        openAddModal();
       };
 
       document.getElementById("addNewRecipeBtn").onclick = () => {
         if (!confirmEditing()) return;
-        alert("レシピ追加モーダルを開きます（あなたの add.html に合わせて実装してください）");
+        openAddModal();
       };
     }
-
-    function hideDetail() {
-      document.getElementById("detailWrapper").style.display = "none";
+      wrapper.style.display = "none";
     }
 
     function toggleTagBar() {
@@ -456,6 +501,130 @@
       });
 
       bar.style.display = "flex";
+    }
+
+    /* -------------------------
+       レシピ追加モーダル処理
+    ------------------------- */
+    function setupAddModal() {
+      document.getElementById("cancelAddBtn").onclick = () => {
+        if (!confirmEditing()) return;
+        closeAddModal();
+      };
+
+      document.getElementById("saveAddBtn").onclick = () => {
+        saveRecipe();
+      };
+    }
+
+    function openAddModal() {
+      document.getElementById("addModalBackdrop").style.display = "flex";
+      isEditing = true;
+    }
+
+    function closeAddModal() {
+      document.getElementById("addModalBackdrop").style.display = "none";
+      isEditing = false;
+      clearAddForm();
+    }
+
+    function clearAddForm() {
+      document.getElementById("inputGenre").value = "";
+      document.getElementById("inputTitle").value = "";
+      document.getElementById("inputSubtitle").value = "";
+      document.getElementById("inputIngredients").value = "";
+      document.getElementById("inputSteps").value = "";
+      document.getElementById("inputImage").value = "";
+    }
+
+    function saveRecipe() {
+      const genre = document.getElementById("inputGenre").value.trim();
+      const title = document.getElementById("inputTitle").value.trim();
+      const subtitle = document.getElementById("inputSubtitle").value.trim();
+      const ingredients = document.getElementById("inputIngredients").value.trim().split("\n");
+      const steps = document.getElementById("inputSteps").value.trim().split("\n");
+      const image = document.getElementById("inputImage").value.trim();
+
+      if (!genre || !title) {
+        alert("ジャンルとタイトルは必須です");
+        return;
+      }
+
+      const recipe = {
+        genre,
+        title,
+        subtitle,
+        ingredients,
+        steps,
+        thumb: image,
+        file: `${title}.html`,
+        tags: extractTags(ingredients, steps)
+      };
+
+      downloadRecipeHtml(recipe);
+      generateJsonSnippet(recipe);
+
+      isEditing = false;
+      closeAddModal();
+    }
+
+    function extractTags(ingredients, steps) {
+      const tags = new Set();
+      ingredients.forEach(i => {
+        if (i.length > 0) tags.add(i.split(" ")[0]);
+      });
+      return [...tags];
+    }
+
+    function downloadRecipeHtml(recipe) {
+      const html = `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>${recipe.title}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { font-family: sans-serif; padding: 1rem; }
+img { width: 100%; border-radius: 0.5rem; }
+</style>
+</head>
+<body>
+<h1>${recipe.title}</h1>
+<h3>${recipe.subtitle}</h3>
+<img src="${recipe.thumb}">
+<h2>材料</h2>
+<ul>
+${recipe.ingredients.map(i => `<li>${i}</li>`).join("")}
+</ul>
+<h2>作り方</h2>
+<ol>
+${recipe.steps.map(s => `<li>${s}</li>`).join("")}
+</ol>
+</body>
+</html>
+`;
+
+      const blob = new Blob([html], { type: "text/html" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = recipe.file;
+      a.click();
+    }
+
+    function generateJsonSnippet(recipe) {
+      const snippet = `
+{
+  "genre": "${recipe.genre}",
+  "title": "${recipe.title}",
+  "subtitle": "${recipe.subtitle}",
+  "tags": ${JSON.stringify(recipe.tags)},
+  "thumb": "${recipe.thumb}",
+  "file": "${recipe.file}"
+}
+`;
+      console.log("JSON snippet:\n", snippet);
+      alert("JSON スニペットをコンソールに出力しました");
     }
   </script>
 </body>
