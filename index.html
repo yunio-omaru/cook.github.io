@@ -381,6 +381,24 @@
       cursor: pointer;
     }
 
+    /* GitHub Settings Accordion */
+    .gh-settings-toggle {
+      font-size: 0.75rem;
+      color: var(--muted);
+      cursor: pointer;
+      text-align: left;
+      padding: 0.3rem 0;
+      user-select: none;
+    }
+    .gh-settings-content {
+      display: none;
+      border: 1px dashed var(--border);
+      padding: 0.6rem;
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
+      background: #0d0d0d;
+    }
+
     @media (max-width: 720px) {
       .detail-top-row {
         grid-template-columns: 1fr;
@@ -423,7 +441,7 @@
     <section class="detail-wrapper" id="detailWrapper">
       <div class="preview-actions" id="previewActions">
         <button class="secondary-btn" id="previewEditBtn">編集</button>
-        <button class="primary-btn" id="previewSubmitBtn">レシピ保存</button>
+        <button class="primary-btn" id="previewSubmitBtn">GitHubへ自動保存</button>
       </div>
 
       <div class="detail-header">
@@ -467,6 +485,18 @@
         <button class="close-btn" id="addModalClose">×</button>
       </div>
       <div class="modal-body">
+        <div class="gh-settings-toggle" id="ghToggle">▶ GitHub自動保存の設定（初回のみ要入力）</div>
+        <div class="gh-settings-content" id="ghContent">
+          <div class="form-row">
+            <label class="form-label">GitHubユーザー名</label>
+            <input class="form-input" id="ghUser" placeholder="例：yunio-omaru" />
+          </div>
+          <div class="form-row">
+            <label class="form-label">個人アクセストークン（PAT）</label>
+            <input type="password" class="form-input" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" />
+          </div>
+        </div>
+
         <div class="form-row">
           <label class="form-label">ジャンル</label>
           <select class="form-select" id="inputGenre">
@@ -501,7 +531,7 @@
       </div>
       <div class="modal-footer">
         <button class="secondary-btn" id="previewBtn">プレビュー</button>
-        <button class="primary-btn" id="downloadBtn">レシピHTMLを保存</button>
+        <button class="primary-btn" id="downloadBtn">GitHubへ自動保存</button>
       </div>
     </div>
   </div>
@@ -518,7 +548,8 @@
       setupAddModal();
       setupPreviewActions();
       loadRecipeList();
-      checkEditMode(); // 個別ページから「再編集」で戻ってきたかチェック
+      checkEditMode();
+      setupGitHubSettings(); // GitHub設定の初期化
     });
 
     function returnToMainMenu() {
@@ -711,11 +742,13 @@
         openAddModal();
       });
 
-      document.getElementById("previewSubmitBtn").addEventListener("click", () => {
+      document.getElementById("previewSubmitBtn").addEventListener("click", async () => {
         if (!currentPreviewData) return;
-        downloadRecipeHtml(currentPreviewData);
-        closeAddModal(true); 
-        returnToMainMenu();
+        const success = await uploadToGitHub(currentPreviewData);
+        if (success) {
+          closeAddModal(true); 
+          returnToMainMenu();
+        }
       });
     }
 
@@ -748,7 +781,7 @@
       document.getElementById("downloadBtn").addEventListener("click", async () => {
         const recipe = await collectRecipeFromForm();
         if (!recipe) return;
-        downloadRecipeHtml(recipe);
+        await uploadToGitHub(recipe);
       });
     }
 
@@ -827,21 +860,96 @@
       return title.replace(/[\\\/:*?"<>|]/g, "_").trim() || "recipe";
     }
 
-    function downloadRecipeHtml(recipe) {
-      const html = buildRecipeCardHtml(recipe);
-      const blob = new Blob([html], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = recipe.file;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      alert("レシピHTMLを保存しました。\nGitHubの recipes フォルダにアップロードしてください。");
+    // 💡 GitHub設定アコーディオンの開閉と保存処理
+    function setupGitHubSettings() {
+      const toggle = document.getElementById("ghToggle");
+      const content = document.getElementById("ghContent");
+      const userEl = document.getElementById("ghUser");
+      const tokenEl = document.getElementById("ghToken");
+
+      // ローカルストレージから既存の設定を復元
+      userEl.value = localStorage.getItem("gh_user") || "";
+      tokenEl.value = localStorage.getItem("gh_token") || "";
+
+      toggle.addEventListener("click", () => {
+        if (content.style.display === "block") {
+          content.style.display = "none";
+          toggle.textContent = "▶ GitHub自動保存の設定（初回のみ要入力）";
+        } else {
+          content.style.display = "block";
+          toggle.textContent = "▼ GitHub自動保存の設定";
+        }
+      });
+
+      // 入力されたら自動保存
+      userEl.addEventListener("input", () => localStorage.setItem("gh_user", userEl.value.trim()));
+      tokenEl.addEventListener("input", () => localStorage.setItem("gh_token", tokenEl.value.trim()));
     }
 
-    // 個別ページから編集モードで戻ってきたかを判定し、自動でフォームを開く処理
+    // 💡 GitHub APIを使って直接コミット（追加・上書き）する関数
+    async function uploadToGitHub(recipe) {
+      const user = localStorage.getItem("gh_user");
+      const token = localStorage.getItem("gh_token");
+      const repo = "cook.github.io"; // リポジトリ名固定
+
+      if (!user || !token) {
+        alert("GitHubのユーザー名とトークンを設定してください。\n（「GitHub自動保存の設定」から入力できます）");
+        document.getElementById("ghContent").style.display = "block";
+        return false;
+      }
+
+      const path = "recipes/" + recipe.file;
+      const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+      const htmlContent = buildRecipeCardHtml(recipe);
+      
+      // UTF-8の文字列をBase64に安全に変換する処理
+      const base64Content = btoa(unescape(encodeURIComponent(htmlContent)));
+
+      // 上書き（更新）か新規追加かを判定するため、既存ファイルのSHA（ID）があるか確認しに行く
+      let sha = null;
+      try {
+        const res = await fetch(url, {
+          headers: { "Authorization": `token ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          sha = data.sha; // 既存ファイルがある場合はSHAを取得
+        }
+      } catch (e) {
+        // 新規ファイルの場合はここを通る（何もしなくてOK）
+      }
+
+      // GitHubへAPI送信（コミット）
+      try {
+        const bodyData = {
+          message: `recipe: ${sha ? 'Update' : 'Add'} ${recipe.title}`,
+          content: base64Content
+        };
+        if (sha) bodyData.sha = sha; // 上書きの場合は対象のSHAを載せる
+
+        const response = await fetch(url, {
+          method: "PUT",
+          headers: {
+            "Authorization": `token ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(bodyData)
+        });
+
+        if (response.ok) {
+          alert(`🎉 GitHubの recipes フォルダへ直接保存しました！\n数分後にサイトへ自動反映されます。`);
+          return true;
+        } else {
+          const errData = await response.json();
+          alert(`保存に失敗しました。\nGitHubエラー: ${errData.message || '不明なエラー'}`);
+          return false;
+        }
+      } catch (error) {
+        alert("通信エラーが発生しました: " + error.message);
+        return false;
+      }
+    }
+
     function checkEditMode() {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get("mode") === "edit") {
@@ -864,7 +972,6 @@
           document.getElementById("modalTitle").textContent = "レシピ編集";
           openAddModal();
           
-          // クリーンアップ
           sessionStorage.removeItem("edit_recipe_target");
           window.history.replaceState({}, document.title, window.location.pathname);
           
