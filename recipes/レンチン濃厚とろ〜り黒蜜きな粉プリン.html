@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>レンチン濃厚とろ〜り黒蜜きな粉プリン</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top, #222 0, #050505 55%, #000 100%);
+  color: #f5f5f5;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+.card {
+  max-width: 900px;
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid #333;
+  background: radial-gradient(circle at top left, #2a1515 0, #050505 55%, #000 100%);
+  padding: 0.9rem;
+  box-sizing: border-box;
+  position: relative;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  border-bottom: 1px dashed rgba(255,255,255,0.08);
+  padding-bottom: 0.4rem;
+  padding-right: 4rem;
+}
+.card-title { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.06em; }
+.card-subtitle { font-size: 0.75rem; color: #aaaaaa; }
+.card-tag { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15); color: #ff7043; }
+
+.edit-btn {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  border: 1px solid #333;
+  background: #151515;
+  color: #f5f5f5;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.edit-btn:hover {
+  background: #222;
+  border-color: #ff7043;
+}
+
+.card-body { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }
+.card-top-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr); gap: 0.75rem; }
+
+.card-image { width: 100%; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.12); object-fit: cover; background: #111; aspect-ratio: 4 / 3; }
+.section-title { font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: #aaaaaa; margin-bottom: 0.25rem; }
+.ingredients, .steps { font-size: 0.8rem; line-height: 1.5; }
+.ingredients ul, .steps ol { margin: 0.2rem 0 0; padding-left: 1.1rem; }
+.ingredients li, .steps li { margin-bottom: 0.15rem; }
+.card-footer { display: flex; justify-content: flex-end; margin-top: 0.2rem; }
+.card-note { font-size: 0.7rem; color: #aaaaaa; }
+
+@media (max-width: 720px) {
+  .card-top-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <button class="edit-btn" id="editBtn">編集</button>
+  <div class="card-header">
+    <div>
+      <div class="card-title">レンチン濃厚とろ〜り黒蜜きな粉プリン</div>
+      <div class="card-subtitle">デザート,プリン</div>
+    </div>
+    <div class="card-tag">主食</div>
+  </div>
+  <div class="card-body">
+    <div class="card-top-row">
+      <div>
+        <img id="cardImage" class="card-image" src="" alt="レシピ画像" />
+      </div>
+      <div>
+        <div class="section-title">材料</div>
+        <div class="ingredients"><ul><li>無調整豆乳 200ml</li><li>きなこ 大さじ2</li><li>米粉 大さじ2</li><li>はちみつ 大さじ1</li><li>黒蜜 お好み量（仕上げ用＋混ぜ込み用も可）</li></ul></div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title" style="margin-top:0.5rem;">作り方</div>
+      <div class="steps"><ol><li>材料をすべてボウルに入れてよく混ぜる</li><li>※豆乳をあらかじめ少し温めておくとダマになりにくい</li><li>600Wで2分レンチン → よく混ぜる</li><li>さらに600Wで2分レンチン → とろみが出るまでよく混ぜる</li><li>※混ぜてチンを繰り返すほど“もったり感”が増す</li><li>とろっとしてきたら容器に流し込み、冷蔵庫で冷やす</li><li>仕上げに黒蜜をたっぷりかけて完成</li></ol></div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <span class="card-note">ゴリのレシピ</span>
+  </div>
+</div>
+
+<script>
+document.getElementById("editBtn").addEventListener("click", () => {
+  const target = {
+    genre: "主食",
+    title: "レンチン濃厚とろ〜り黒蜜きな粉プリン",
+    subtitle: "デザート,プリン",
+    ingredients: ["無調整豆乳 200ml","きなこ 大さじ2","米粉 大さじ2","はちみつ 大さじ1","黒蜜 お好み量（仕上げ用＋混ぜ込み用も可）"],
+    steps: ["材料をすべてボウルに入れてよく混ぜる","※豆乳をあらかじめ少し温めておくとダマになりにくい","600Wで2分レンチン → よく混ぜる","さらに600Wで2分レンチン → とろみが出るまでよく混ぜる","※混ぜてチンを繰り返すほど“もったり感”が増す","とろっとしてきたら容器に流し込み、冷蔵庫で冷やす","仕上げに黒蜜をたっぷりかけて完成"],
+    image: ""
+  };
+  sessionStorage.setItem("edit_recipe_target", JSON.stringify(target));
+  window.location.href = "../index.html?mode=edit";
+});
+</script>
+</body>
+</html>
