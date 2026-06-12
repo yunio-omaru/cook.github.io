@@ -16,11 +16,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 💡 正しい公式のアクション名に変更しました
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # 安定版のNode.jsを指定
+          node-version: '20'
 
       - name: Generate JSON from HTML files
         run: |
@@ -41,8 +40,6 @@ jobs:
             const filePath = path.join(recipesDir, file);
             const html = fs.readFileSync(filePath, "utf8");
             
-            // 各種メタデータの抽出 (data-*属性から抽出)
-            // 💡 属性値が空文字（""）の場合も許容できるように正規表現を * に修正
             const genreMatch = html.match(/data-genre="([^"]*)"/);
             const titleMatch = html.match(/data-title="([^"]*)"/);
             const subtitleMatch = html.match(/data-subtitle="([^"]*)"/);
@@ -50,12 +47,18 @@ jobs:
             const thumbMatch = html.match(/<img[^>]*id="cardImage"[^>]*src="([^"]*)"/);
             
             if (titleMatch) {
+              // 💡 HTML内の画像パス（../images/〜）から、トップページ用のパス（images/〜）に自動変換
+              let thumbPath = thumbMatch ? thumbMatch[1] : "";
+              if (thumbPath.startsWith("../")) {
+                thumbPath = thumbPath.replace(/^\.\.\//, "");
+              }
+
               list.push({
                 genre: (genreMatch && genreMatch[1]) ? genreMatch[1] : "主食",
                 title: titleMatch[1],
                 subtitle: (subtitleMatch && subtitleMatch[1]) ? subtitleMatch[1] : "",
                 tags: (tagsMatch && tagsMatch[1]) ? tagsMatch[1].split(",").map(t => t.trim()).filter(t => t) : [],
-                thumb: thumbMatch ? thumbMatch[1] : "",
+                thumb: thumbPath,
                 file: file
               });
             }
