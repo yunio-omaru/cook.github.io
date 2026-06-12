@@ -40,31 +40,50 @@ jobs:
             const filePath = path.join(recipesDir, file);
             const html = fs.readFileSync(filePath, "utf8");
             
-            // 💡 属性のクォーテーションがシングル/ダブルどちらでも対応できるように正規表現を強化
-            const genreMatch = html.match(/data-genre=["\']([^"\']*)["\']/);
-            const titleMatch = html.match(/data-title=["\']([^"\']*)["\']/);
-            const subtitleMatch = html.match(/data-subtitle=["\']([^"\']*)["\']/);
-            const tagsMatch = html.match(/data-tags=["\']([^"\']*)["\']/);
-            const thumbMatch = html.match(/<img[^>]*id=["\']cardImage["\'][^>]*src=["\']([^"\']*)["\']/);
+            // 1. タグ内の data-属性 からの抽出を試みる（ダブル/シングル対応）
+            let genreMatch = html.match(/data-genre=["\']([^"\']*)["\']/);
+            let titleMatch = html.match(/data-title=["\']([^"\']*)["\']/);
+            let subtitleMatch = html.match(/data-subtitle=["\']([^"\']*)["\']/);
+            let tagsMatch = html.match(/data-tags=["\']([^"\']*)["\']/);
             
-            // 💡 もしHTML内に属性がない場合の救出策（<title>タグや、最悪ファイル名からタイトルを取得）
+            // 2. 💡【超重要】タグになければ、下部の <script> 内の記述から直接抽出する
+            if (!genreMatch) genreMatch = html.match(/genre\s*:\s*["\']([^"\']*)["\']/);
+            if (!titleMatch) titleMatch = html.match(/title\s*:\s*["\']([^"\']*)["\']/);
+            if (!subtitleMatch) subtitleMatch = html.match(/subtitle\s*:\s*["\']([^"\']*)["\']/);
+            if (!tagsMatch) tagsMatch = html.match(/tags\s*:\s*["\']([^"\']*)["\']/);
+            
+            // 3. 画像（サムネイル）の抽出：idの有無に関わらず、最初のimgまたはscript内のimageから取得
+            let imgMatch = html.match(/<img[^>]+src=["\']([^"\']*)["\']/i);
+            if (!imgMatch) imgMatch = html.match(/image\s*:\s*["\']([^"\']*)["\']/);
+            
+            // 4. タイトルの最終バックアップ（<title>タグ、またはファイル名）
             const htmlTitleMatch = html.match(/<title>([^<]*)<\/title>/i);
-            const fallbackTitle = (htmlTitleMatch && htmlTitleMatch[1]) ? htmlTitleMatch[1].trim() : file.replace(".html", "");
+            const fallbackTitle = htmlTitleMatch ? htmlTitleMatch[1].trim() : file.replace(".html", "");
             
-            // タイトル属性があればそれを使い、なければ救出策のタイトルを使う
             const finalTitle = (titleMatch && titleMatch[1]) ? titleMatch[1] : fallbackTitle;
+            const finalGenre = (genreMatch && genreMatch[1]) ? genreMatch[1] : "未分類";
+            const finalSubtitle = (subtitleMatch && subtitleMatch[1]) ? subtitleMatch[1] : "";
             
-            let thumbPath = thumbMatch ? thumbMatch[1] : "";
-            if (thumbPath.startsWith("../")) {
-              thumbPath = thumbPath.replace(/^\.\.\//, "");
+            // タグから取れたか、スクリプトから取れたかで処理を変えてtags配列を作る
+            let finalTags = [];
+            if (tagsMatch && tagsMatch[1]) {
+              finalTags = tagsMatch[1].split(",").map(t => t.trim()).filter(t => t);
+            } else if (finalSubtitle) {
+              // subtitle（そうめん,豚,ナスなど）をカンマで区切ってタグ代わりにする救出策
+              finalTags = finalSubtitle.split(",").map(t => t.trim()).filter(t => t);
+            }
+            
+            let thumbPath = (imgMatch && imgMatch[1]) ? imgMatch[1] : "";
+            if (thumbPath.indexOf("../") === 0) {
+              thumbPath = thumbPath.replace("../", "");
             }
 
-            // 💡 条件を緩めて、どんなHTMLファイルでも必ずリストに含めるように変更
+            // どんなファイル構造でも必ずpushして救出する
             list.push({
-              genre: (genreMatch && genreMatch[1]) ? genreMatch[1] : "未分類",
+              genre: finalGenre,
               title: finalTitle,
-              subtitle: (subtitleMatch && subtitleMatch[1]) ? subtitleMatch[1] : "",
-              tags: (tagsMatch && tagsMatch[1]) ? tagsMatch[1].split(",").map(t => t.trim()).filter(t => t) : [],
+              subtitle: finalSubtitle,
+              tags: finalTags,
               thumb: thumbPath,
               file: file
             });
@@ -78,4 +97,4 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add recipe-list.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: Auto-generate recipe-list.json (Robust Version)" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: Auto-generate recipe-list.json (Script Parsing Version)" && git push)
