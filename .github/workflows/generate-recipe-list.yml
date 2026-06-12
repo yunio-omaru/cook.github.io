@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'recipes/**.html'
-  workflow_dispatch:
+  workflow_dispatch: # ← これが手動実行のトリガー
 
 permissions:
   contents: write
@@ -16,52 +16,107 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 💡 正しい公式のアクション名に変更しました
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # 安定版のNode.jsを指定
+          node-version: '20'
 
       - name: Generate JSON from HTML files
+        env:
+          # 💡 手動実行（workflow_dispatch）のときだけ 'true' になる環境変数を定義
+          IS_MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           node -e '
           const fs = require("fs");
           const path = require("path");
           
           const recipesDir = "recipes";
+          const jsonPath = "recipe-list.json";
+          const isManual = process.env.IS_MANUAL === "true";
+          
+          let currentList = [];
+          
+          // 💡 手動実行（Run workflow）のときは既存のJSONを無視して空からスタート（全走査）
+          // 💡 通常のプッシュ（自動追加・修正）のときは既存のJSONを読み込んで過去を保持
+          if (isManual) {
+            console.log("🔄 手動実行が検出されました。recipesフォルダ内を全走査してリストを完全に作り直します。");
+            currentList = [];
+          } else if (fs.existsSync(jsonPath)) {
+            try {
+              currentList = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+              console.log(`⏱️ 自動更新: 既存のデータをベースに差分更新します (現在の件数: ${currentList.length}件)`);
+            } catch (e) {
+              currentList = [];
+            }
+          }
+          
           if (!fs.existsSync(recipesDir)) {
-            fs.writeFileSync("recipe-list.json", "[]");
+            fs.writeFileSync(jsonPath, JSON.stringify(currentList, null, 2));
             process.exit(0);
           }
           
-          const files = fs.readdirSync(recipesDir).filter(f => f.endsWith(".html"));
-          const list = [];
+          const htmlFiles = fs.readdirSync(recipesDir).filter(f => f.endsWith(".html"));
           
-          files.forEach(file => {
+          htmlFiles.forEach(file => {
             const filePath = path.join(recipesDir, file);
             const html = fs.readFileSync(filePath, "utf8");
             
-            // 各種メタデータの抽出 (data-*属性から抽出)
-            // 💡 属性値が空文字（""）の場合も許容できるように正規表現を * に修正
-            const genreMatch = html.match(/data-genre="([^"]*)"/);
-            const titleMatch = html.match(/data-title="([^"]*)"/);
-            const subtitleMatch = html.match(/data-subtitle="([^"]*)"/);
-            const tagsMatch = html.match(/data-tags="([^"]*)"/);
-            const thumbMatch = html.match(/<img[^>]*id="cardImage"[^>]*src="([^"]*)"/);
+            // 各種メタデータの抽出（あらゆるHTML記述形式に対応）
+            let genreMatch = html.match(/data-genre="([^"]*)"/) || html.match(/genre\s*:\s*"([^"]*)"/);
+            let titleMatch = html.match(/data-title="([^"]*)"/) || html.match(/title\s*:\s*"([^"]*)"/);
+            let subtitleMatch = html.match(/data-subtitle="([^"]*)"/) || html.match(/subtitle\s*:\s*"([^"]*)"/);
+            let tagsMatch = html.match(/data-tags="([^"]*)"/) || html.match(/tags\s*:\s*"([^"]*)"/);
             
+            let thumbMatch = html.match(/<img[^>]*src="([^"]*)"/) || html.match(/image\s*:\s*"([^"]*)"/);
+            
+            let finalTitle = "";
             if (titleMatch) {
-              list.push({
-                genre: (genreMatch && genreMatch[1]) ? genreMatch[1] : "主食",
-                title: titleMatch[1],
-                subtitle: (subtitleMatch && subtitleMatch[1]) ? subtitleMatch[1] : "",
-                tags: (tagsMatch && tagsMatch[1]) ? tagsMatch[1].split(",").map(t => t.trim()).filter(t => t) : [],
-                thumb: thumbMatch ? thumbMatch[1] : "",
-                file: file
-              });
+              finalTitle = titleMatch[1];
+            } else {
+              const htmlTitleMatch = html.match(/<title>([^<]*)<\/title>/i);
+              finalTitle = htmlTitleMatch ? htmlTitleMatch[1].trim() : file.replace(".html", "");
+            }
+            
+            let finalSubtitle = (subtitleMatch && subtitleMatch[1]) ? subtitleMatch[1] : "";
+            let finalGenre = (genreMatch && genreMatch[1]) ? genreMatch[1] : "主食";
+            
+            let finalTags = [];
+            if (tagsMatch && tagsMatch[1]) {
+              finalTags = tagsMatch[1].split(",").map(t => t.trim()).filter(t => t);
+            } else if (finalSubtitle) {
+              finalTags = finalSubtitle.split(",").map(t => t.trim()).filter(t => t);
+            }
+            
+            let thumbPath = thumbMatch ? thumbMatch[1] : "";
+            if (thumbPath.startsWith("../")) {
+              thumbPath = thumbPath.replace("../", "");
+            }
+            
+            const recipeData = {
+              genre: finalGenre,
+              title: finalTitle,
+              subtitle: finalSubtitle,
+              tags: finalTags,
+              thumb: thumbPath,
+              file: file
+            };
+            
+            const existingIndex = currentList.findIndex(item => item.file === file);
+            
+            if (existingIndex !== -1) {
+              // 自動更新モードで既存データがあれば「上書き（修正）」
+              currentList[existingIndex] = recipeData;
+            } else {
+              // 新規ファイル、または手動全走査モードなら「新規追加」
+              currentList.push(recipeData);
             }
           });
           
-          fs.writeFileSync("recipe-list.json", JSON.stringify(list, null, 2));
+          // 実際のファイルがないのにJSONに残っているゴミデータを掃除
+          currentList = currentList.filter(item => htmlFiles.includes(item.file));
+          
+          fs.writeFileSync(jsonPath, JSON.stringify(currentList, null, 2));
+          console.log(`✨ 処理完了。合計レシピ数: ${currentList.length}件`);
           '
 
       - name: Commit and Push changes
@@ -69,4 +124,4 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add recipe-list.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: Auto-generate recipe-list.json" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: Sync recipe-list.json" && git push)
