@@ -533,7 +533,7 @@
         <div class="form-row">
           <label class="form-label">サブタイトル（タグ）</label>
           <input class="form-input" id="inputSubtitle" placeholder="例：ラーメン, 牛肉, 味噌" />
-          <div class="form-hint">カンマ区切りで複数タグを指定できます。</div>
+          <div class="form-hint">カンマ��切りで複数タグを指定できます。</div>
         </div>
         <div class="form-row">
           <label class="form-label">材料（1行につき1つ）</label>
@@ -922,7 +922,7 @@
       tokenEl.addEventListener("input", () => localStorage.setItem("gh_token", tokenEl.value.trim()));
     }
 
-    // 💡 HTMLに加えて「recipe-list.json」も取得＆同期してGitHubへ同時上書き保存する関数
+    // 💡【修正】recipe-list.jsonの取得・保持・更新ロジックを強化
     async function uploadToGitHub(recipe) {
       const user = localStorage.getItem("gh_user");
       const token = localStorage.getItem("gh_token");
@@ -943,8 +943,13 @@
       let recipeSha = null;
       try {
         const res = await fetch(recipeUrl, { headers: { "Authorization": `token ${token}` } });
-        if (res.ok) { const data = await res.json(); recipeSha = data.sha; }
-      } catch (e) {}
+        if (res.ok) { 
+          const data = await res.json(); 
+          recipeSha = data.sha; 
+        }
+      } catch (e) {
+        console.error("レシピファイルの確認に失敗:", e);
+      }
 
       // --- 2. recipe-list.json の自動更新準備 ---
       const jsonPath = "recipe-list.json";
@@ -954,16 +959,31 @@
       let currentJsonData = [];
       
       try {
-        const res = await fetch(jsonUrl, { headers: { "Authorization": `token ${token}` } });
+        const res = await fetch(jsonUrl, { 
+          headers: { 
+            "Authorization": `token ${token}`,
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          } 
+        });
         if (res.ok) {
           const data = await res.json();
           jsonSha = data.sha;
           // 現在のJSONデータをGitHubからダウンロードしてデコード
-          const decodedJson = decodeURIComponent(escape(atob(data.content)));
-          currentJsonData = JSON.parse(decodedJson);
+          try {
+            const decodedJson = decodeURIComponent(escape(atob(data.content)));
+            const parsedData = JSON.parse(decodedJson);
+            currentJsonData = Array.isArray(parsedData) ? parsedData : [];
+            console.log("✓ 既存のJSON取得成功。現在のレシピ数:", currentJsonData.length);
+          } catch (parseErr) {
+            console.error("JSON解析エラー:", parseErr);
+            currentJsonData = [];
+          }
+        } else {
+          console.log("⚠ JSONファイルが未作成。新規作成します。");
         }
       } catch (e) {
-        console.error("JSONの取得に失敗したか、存在しません。新規作成します。", e);
+        console.error("JSONの取得に失敗:", e);
+        currentJsonData = [];
       }
 
       // JSONデータ内の該当レシピを検索（あれば上書き、なければ新規追加）
@@ -973,98 +993,89 @@
         title: recipe.title,
         subtitle: recipe.subtitle,
         tags: recipe.tags,
-        thumb: recipe.thumb || "", // 💡 これでJSONファイル側にもBase64データが同期されます
+        thumb: recipe.thumb || "", 
         file: recipe.file
       };
 
       if (existingIndex >= 0) {
+        console.log("更新: " + recipe.title);
         currentJsonData[existingIndex] = jsonItem;
       } else {
+        console.log("追加: " + recipe.title);
         currentJsonData.push(jsonItem);
       }
 
+      console.log("JSON更新後のレシピ数:", currentJsonData.length);
       const updatedJsonText = JSON.stringify(currentJsonData, null, 2);
       const base64Json = btoa(unescape(encodeURIComponent(updatedJsonText)));
 
       // --- 3. GitHubへ両ファイル同時送信 ---
       try {
         // ① レシピHTMLのPUT
-        const bodyHtml = { message: `recipe: HTML ${recipeSha ? 'Update' : 'Add'} ${recipe.title}`, content: base64Html };
+        const bodyHtml = { 
+          message: `recipe: HTML ${recipeSha ? 'Update' : 'Add'} ${recipe.title}`, 
+          content: base64Html 
+        };
         if (recipeSha) bodyHtml.sha = recipeSha;
         
         const resHtml = await fetch(recipeUrl, {
           method: "PUT",
-          headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+          headers: { 
+            "Authorization": `token ${token}`, 
+            "Content-Type": "application/json" 
+          },
           body: JSON.stringify(bodyHtml)
         });
 
         if (!resHtml.ok) {
-          const err = await resHtml.json();
-          alert(`HTMLの保存に失敗: ${err.message}`);
+          const errData = await resHtml.json();
+          alert("HTMLの保存に失敗しました:\n" + JSON.stringify(errData));
           return false;
         }
 
         // ② recipe-list.jsonのPUT
-        const bodyJson = { message: `recipe: JSON List Update for ${recipe.title}`, content: base64Json };
+        const bodyJson = { 
+          message: `recipe-list: ${recipe.title}をアップデート`, 
+          content: base64Json 
+        };
         if (jsonSha) bodyJson.sha = jsonSha;
-
+        
         const resJson = await fetch(jsonUrl, {
           method: "PUT",
-          headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+          headers: { 
+            "Authorization": `token ${token}`, 
+            "Content-Type": "application/json" 
+          },
           body: JSON.stringify(bodyJson)
         });
 
-        if (resJson.ok) {
-          alert(`🎉 レシピと一覧データ（JSON）の両方をGitHubへ直接保存しました！\n数分後にサムネイル付きで自動反映されます。`);
-          return true;
-        } else {
-          const err = await resJson.json();
-          alert(`JSONリストの保存に失敗: ${err.message}`);
+        if (!resJson.ok) {
+          const errData = await resJson.json();
+          alert("JSONの保存に失敗しました:\n" + JSON.stringify(errData));
           return false;
         }
-      } catch (error) {
-        alert("通信エラーが発生しました: " + error.message);
+
+        alert("✓ レシピを保存しました！");
+        
+        // ローカルの allRecipes も更新して即座に表示に反映させる
+        await new Promise(r => setTimeout(r, 500)); // GitHub同期待ち
+        await loadRecipeList();
+        
+        return true;
+      } catch (err) {
+        console.error("GitHubアップロード中のエラー:", err);
+        alert("保存中にエラーが発生しました:\n" + err.message);
         return false;
       }
     }
 
-    function checkEditMode() {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("mode") === "edit") {
-        const sessionData = sessionStorage.getItem("edit_recipe_target");
-        if (!sessionData) return;
-
-        try {
-          const recipe = JSON.parse(sessionData);
-          
-          document.getElementById("inputGenre").value = recipe.genre || "主食";
-          document.getElementById("inputTitle").value = recipe.title || "";
-          document.getElementById("inputSubtitle").value = recipe.subtitle || "";
-          document.getElementById("inputIngredients").value = (recipe.ingredients || []).join("\n");
-          document.getElementById("inputSteps").value = (recipe.steps || []).join("\n");
-          
-          if (recipe.image && !recipe.image.startsWith(window.location.origin)) {
-            currentPreviewData = { image: recipe.image, thumb: recipe.image };
-          }
-
-          document.getElementById("modalTitle").textContent = "レシピ編集";
-          openAddModal();
-          
-          sessionStorage.removeItem("edit_recipe_target");
-          window.history.replaceState({}, document.title, window.location.pathname);
-          
-        } catch (e) {
-          console.error("編集データの読み込みに失敗しました", e);
-        }
-      }
-    }
-
     function buildRecipeCardHtml(recipe) {
-      const ingList = (recipe.ingredients || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("");
-      const stepList = (recipe.steps || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("");
-      const tagsText = (recipe.tags || []).join(", ");
-      const rawIngredients = JSON.stringify(recipe.ingredients || []);
-      const rawSteps = JSON.stringify(recipe.steps || []);
+      const ingredientsHtml = recipe.ingredients
+        .map((ing) => `<li>${escapeHtml(ing)}</li>`)
+        .join("");
+      const stepsHtml = recipe.steps
+        .map((step) => `<li>${escapeHtml(step)}</li>`)
+        .join("");
 
       return `<!DOCTYPE html>
 <html lang="ja">
@@ -1153,16 +1164,16 @@ body {
   <div class="card-body">
     <div class="card-top-row">
       <div>
-        <img id="cardImage" class="card-image" src="${recipe.image || ''}" alt="レシピ画像" style="display:${recipe.image ? 'block' : 'none'};" />
+        <img id="cardImage" class="card-image" src="${recipe.image || ''}" alt="レシピ画像" />
       </div>
       <div>
         <div class="section-title">材料</div>
-        <div class="ingredients"><ul>${ingList}</ul></div>
+        <div class="ingredients"><ul>${ingredientsHtml}</ul></div>
       </div>
     </div>
     <div>
       <div class="section-title" style="margin-top:0.5rem;">作り方</div>
-      <div class="steps"><ol>${stepList}</ol></div>
+      <div class="steps"><ol>${stepsHtml}</ol></div>
     </div>
   </div>
   <div class="card-footer">
@@ -1173,24 +1184,50 @@ body {
 <script>
 document.getElementById("editBtn").addEventListener("click", () => {
   const target = {
-    genre: ${JSON.stringify(recipe.genre)},
-    title: ${JSON.stringify(recipe.title)},
-    subtitle: ${JSON.stringify(recipe.subtitle)},
-    ingredients: ${rawIngredients},
-    steps: ${rawSteps},
-    image: ${JSON.stringify(recipe.image)}
+    genre: "${recipe.genre}",
+    title: "${recipe.title.replace(/"/g, '\\"')}",
+    subtitle: "${recipe.subtitle.replace(/"/g, '\\"')}",
+    ingredients: ${JSON.stringify(recipe.ingredients)},
+    steps: ${JSON.stringify(recipe.steps)},
+    image: "${recipe.image.replace(/"/g, '\\"')}"
   };
   sessionStorage.setItem("edit_recipe_target", JSON.stringify(target));
   window.location.href = "../index.html?mode=edit";
 });
-<\/script>
+</script>
 </body>
 </html>`;
     }
 
-    function escapeHtml(str) {
-      if (!str) return "";
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    function escapeHtml(text) {
+      const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+      return text.replace(/[&<>"']/g, (m) => map[m]);
+    }
+
+    // 編集モードをチェック
+    function checkEditMode() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("mode") === "edit") {
+        const targetJson = sessionStorage.getItem("edit_recipe_target");
+        if (targetJson) {
+          try {
+            const target = JSON.parse(targetJson);
+            document.getElementById("inputGenre").value = target.genre || "主食";
+            document.getElementById("inputTitle").value = target.title || "";
+            document.getElementById("inputSubtitle").value = target.subtitle || "";
+            document.getElementById("inputIngredients").value = (target.ingredients || []).join("\n");
+            document.getElementById("inputSteps").value = (target.steps || []).join("\n");
+            currentPreviewData = target;
+            
+            sessionStorage.removeItem("edit_recipe_target");
+            
+            openAddModal();
+            document.getElementById("modalTitle").textContent = "レシピ編集";
+          } catch (e) {
+            console.error("編集データの復元に失敗しました:", e);
+          }
+        }
+      }
     }
   </script>
 </body>
