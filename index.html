@@ -553,7 +553,14 @@
       </div>
     </div>
   </div>
-
+  <!-- 画像自動変換ツール -->
+<div id="migration-tool"></div>
+<script>
+  fetch('./auto-migrate-images.html')
+    .then(r => r.text())
+    .then(html => {
+      document.getElementById('migration-tool').innerHTML = html;
+    });
   <script src="app.js"></script>
 </body>
 </html>
