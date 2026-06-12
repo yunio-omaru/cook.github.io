@@ -957,7 +957,6 @@
         const imageUrl = `https://api.github.com/repos/${user}/${repo}/contents/${recipe.image}`;
         let imageSha = null;
         
-        // 既存の同名画像があるかチェック（上書き用）
         try {
           const res = await fetch(imageUrl, { headers: { "Authorization": `token ${token}` } });
           if (res.ok) { const data = await res.json(); imageSha = data.sha; }
@@ -990,7 +989,6 @@
       const recipePath = "recipes/" + recipe.file;
       const recipeUrl = `https://api.github.com/repos/${user}/${repo}/contents/${recipePath}`;
       
-      // 💡 HTML内の画像パスは、recipesフォルダから見た相対パス（../images/〜）に調整
       const adjustedRecipe = { ...recipe };
       if (recipe.image) {
         adjustedRecipe.image = "../" + recipe.image;
@@ -1005,54 +1003,11 @@
         if (res.ok) { const data = await res.json(); recipeSha = data.sha; }
       } catch (e) {}
 
-      // --- 2. recipe-list.json の自動更新準備 ---
-      const jsonPath = "recipe-list.json";
-      const jsonUrl = `https://api.github.com/repos/${user}/${repo}/contents/${jsonPath}?_=${new Date().getTime()}`;
-      
-      let jsonSha = null;
-      let currentJsonData = [];
-      
+      // 💡 【スッキリ！】recipe-list.json のブラウザ側処理はすべて削除しました。
+      // HTMLがコミットされると、GitHub Actionsが自動で安全にJSONを再生成します。
+
+      // --- 3. GitHubへレシピHTMLを送信 ---
       try {
-        const res = await fetch(jsonUrl, { headers: { "Authorization": `token ${token}` } });
-        if (res.ok) {
-          const data = await res.json();
-          jsonSha = data.sha;
-          
-          const cleanedContent = data.content.replace(/\s/g, "");
-          const rawBinary = atob(cleanedContent);
-          const bytes = new Uint8Array(rawBinary.length);
-          for (let i = 0; i < rawBinary.length; i++) {
-            bytes[i] = rawBinary.charCodeAt(i);
-          }
-          const decodedJson = new TextDecoder("utf-8").decode(bytes);
-          currentJsonData = JSON.parse(decodedJson);
-        }
-      } catch (e) {
-        console.error("JSONの取得に失敗したか、存在しません。新規作成します。", e);
-      }
-
-      const existingIndex = currentJsonData.findIndex(r => r.file === recipe.file);
-      const jsonItem = {
-        genre: recipe.genre,
-        title: recipe.title,
-        subtitle: recipe.subtitle,
-        tags: recipe.tags,
-        thumb: recipe.thumb || "", // 💡 ここも `images/xxx.jpg` という短い文字リンクになります！
-        file: recipe.file
-      };
-
-      if (existingIndex >= 0) {
-        currentJsonData[existingIndex] = jsonItem;
-      } else {
-        currentJsonData.push(jsonItem);
-      }
-
-      const updatedJsonText = JSON.stringify(currentJsonData, null, 2);
-      const base64Json = btoa(unescape(encodeURIComponent(updatedJsonText)));
-
-      // --- 3. GitHubへ両ファイル（HTML/JSON）送信 ---
-      try {
-        // ① レシピHTMLのPUT
         const bodyHtml = { message: `recipe: HTML ${recipeSha ? 'Update' : 'Add'} ${recipe.title}`, content: base64Html };
         if (recipeSha) bodyHtml.sha = recipeSha;
         
@@ -1062,28 +1017,12 @@
           body: JSON.stringify(bodyHtml)
         });
 
-        if (!resHtml.ok) {
-          const err = await resHtml.json();
-          alert(`HTMLの保存に失敗: ${err.message}`);
-          return false;
-        }
-
-        // ② recipe-list.jsonのPUT
-        const bodyJson = { message: `recipe: JSON List Update for ${recipe.title}`, content: base64Json };
-        if (jsonSha) bodyJson.sha = jsonSha;
-
-        const resJson = await fetch(jsonUrl, {
-          method: "PUT",
-          headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify(bodyJson)
-        });
-
-        if (resJson.ok) {
-          alert(`🎉 画像、レシピ、一覧データのすべてを個別にGitHubへ保存しました！\nファイルが軽量化され、サクサク動くようになります。`);
+        if (resHtml.ok) {
+          alert(`🎉 画像とレシピHTMLをGitHubへ保存しました！\n（一覧データはGitHub側で数秒後に自動更新されます）`);
           return true;
         } else {
-          const err = await resJson.json();
-          alert(`JSONリストの保存に失敗: ${err.message}`);
+          const err = await resHtml.json();
+          alert(`HTMLの保存に失敗: ${err.message}`);
           return false;
         }
       } catch (error) {
