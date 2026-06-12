@@ -946,9 +946,10 @@
         if (res.ok) { const data = await res.json(); recipeSha = data.sha; }
       } catch (e) {}
 
-      // --- 2. recipe-list.json の自動更新準備 ---
+// --- 2. recipe-list.json の自動更新準備 ---
       const jsonPath = "recipe-list.json";
-      const jsonUrl = `https://api.github.com/repos/${user}/${repo}/contents/${jsonPath}`;
+      // 💡 キャッシュによるバグを防ぐため、URLにタイムスタンプ（?_=[時間]）を付与します
+      const jsonUrl = `https://api.github.com/repos/${user}/${repo}/contents/${jsonPath}?_=${new Date().getTime()}`;
       
       let jsonSha = null;
       let currentJsonData = [];
@@ -958,33 +959,21 @@
         if (res.ok) {
           const data = await res.json();
           jsonSha = data.sha;
-          // 現在のJSONデータをGitHubからダウンロードしてデコード
-          const decodedJson = decodeURIComponent(escape(atob(data.content)));
+          
+          // 💡 改行コードを除去してから、UTF-8対応の安全な方法でBase64をデコードします
+          const cleanedContent = data.content.replace(/\s/g, "");
+          const rawBinary = atob(cleanedContent);
+          const bytes = new Uint8Array(rawBinary.length);
+          for (let i = 0; i < rawBinary.length; i++) {
+            bytes[i] = rawBinary.charCodeAt(i);
+          }
+          const decodedJson = new TextDecoder("utf-8").decode(bytes);
+          
           currentJsonData = JSON.parse(decodedJson);
         }
       } catch (e) {
-        console.error("JSONの取得に失敗したか、存在しません。新規作成します。", e);
+        console.error("JSONの取得または解析に失敗しました。新規作成モードに移行します。", e);
       }
-
-      // JSONデータ内の該当レシピを検索（あれば上書き、なければ新規追加）
-      const existingIndex = currentJsonData.findIndex(r => r.file === recipe.file);
-      const jsonItem = {
-        genre: recipe.genre,
-        title: recipe.title,
-        subtitle: recipe.subtitle,
-        tags: recipe.tags,
-        thumb: recipe.thumb || "", // 💡 これでJSONファイル側にもBase64データが同期されます
-        file: recipe.file
-      };
-
-      if (existingIndex >= 0) {
-        currentJsonData[existingIndex] = jsonItem;
-      } else {
-        currentJsonData.push(jsonItem);
-      }
-
-      const updatedJsonText = JSON.stringify(currentJsonData, null, 2);
-      const base64Json = btoa(unescape(encodeURIComponent(updatedJsonText)));
 
       // --- 3. GitHubへ両ファイル同時送信 ---
       try {
