@@ -374,129 +374,83 @@ async function uploadToGitHub(recipe) {
     return false;
   }
 
+  // --- 0. 画像の保存準備（画像が存在する場合のみ） ---
+  if (recipe.rawBase64) {
+    const imageUrl = `https://api.github.com/repos/${user}/${repo}/contents/${recipe.image}`;
+    let imageSha = null;
+    
+    try {
+      const res = await fetch(imageUrl, { headers: { "Authorization": `token ${token}` } });
+      if (res.ok) { const data = await res.json(); imageSha = data.sha; }
+    } catch (e) {}
+
+    const bodyImage = {
+      message: `recipe: Image ${imageSha ? 'Update' : 'Add'} for ${recipe.title}`,
+      content: recipe.rawBase64
+    };
+    if (imageSha) bodyImage.sha = imageSha;
+
+    try {
+      const resImage = await fetch(imageUrl, {
+        method: "PUT",
+        headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(bodyImage)
+      });
+      if (!resImage.ok) {
+        const err = await resImage.json();
+        alert(`画像のアップロードに失敗しました: ${err.message}`);
+        return false;
+      }
+    } catch (error) {
+      alert("画像送信中に通信エラーが発生しました: " + error.message);
+      return false;
+    }
+  }
+
+  // --- 1. レシピHTMLの保存準備 ---
   const recipePath = "recipes/" + recipe.file;
   const recipeUrl = `https://api.github.com/repos/${user}/${repo}/contents/${recipePath}`;
-  const htmlContent = buildRecipeCardHtml(recipe);
-  const base64Html = btoa(unescape(encodeURIComponent(htmlContent)));
+  
+  // 💡 【修正点1】オブジェクトを破壊せず、imageプロパティのパスだけを正しく「../」付きに修正します
+  const adjustedRecipe = { ...recipe };
+  if (recipe.image) {
+    adjustedRecipe.image = "../" + recipe.image;
+  }
+  
+  const htmlContent = buildRecipeCardHtml(adjustedRecipe);
+  
+  // 💡 【修正点2】日本語が絶対に文字化け・クラッシュしない安全なBase64エンコード処理に変更
+  const base64Html = btoa(encodeURIComponent(htmlContent).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+    return String.fromCharCode(parseInt(p1, 16));
+  }));
 
   let recipeSha = null;
   try {
     const res = await fetch(recipeUrl, { headers: { "Authorization": `token ${token}` } });
-    if (res.ok) { 
-      const data = await res.json(); 
-      recipeSha = data.sha; 
-    }
-  } catch (e) {
-    console.error("レシピファイルの確認に失敗:", e);
-  }
+    if (res.ok) { const data = await res.json(); recipeSha = data.sha; }
+  } catch (e) {}
 
-  const jsonPath = "recipe-list.json";
-  const jsonUrl = `https://api.github.com/repos/${user}/${repo}/contents/${jsonPath}`;
-  
-  let jsonSha = null;
-  let currentJsonData = [];
-  
+  // --- 2. GitHubへレシピHTMLを送信 ---
   try {
-    const res = await fetch(jsonUrl, { 
-      headers: { 
-        "Authorization": `token ${token}`,
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-      } 
-    });
-    if (res.ok) {
-      const data = await res.json();
-      jsonSha = data.sha;
-      try {
-        const decodedJson = decodeURIComponent(escape(atob(data.content)));
-        const parsedData = JSON.parse(decodedJson);
-        currentJsonData = Array.isArray(parsedData) ? parsedData : [];
-        console.log("✓ 既存のJSON取得成功。現在のレシピ数:", currentJsonData.length);
-      } catch (parseErr) {
-        console.error("JSON解析エラー:", parseErr);
-        currentJsonData = [];
-      }
-    } else {
-      console.log("⚠ JSONファイルが未作成。新規作成します。");
-    }
-  } catch (e) {
-    console.error("JSONの取得に失敗:", e);
-    currentJsonData = [];
-  }
-
-  const existingIndex = currentJsonData.findIndex(r => r.file === recipe.file);
-  const jsonItem = {
-    genre: recipe.genre,
-    title: recipe.title,
-    subtitle: recipe.subtitle,
-    tags: recipe.tags,
-    thumb: recipe.thumb || "", 
-    file: recipe.file
-  };
-
-  if (existingIndex >= 0) {
-    console.log("更新: " + recipe.title);
-    currentJsonData[existingIndex] = jsonItem;
-  } else {
-    console.log("追加: " + recipe.title);
-    currentJsonData.push(jsonItem);
-  }
-
-  console.log("JSON更新後のレシピ数:", currentJsonData.length);
-  const updatedJsonText = JSON.stringify(currentJsonData, null, 2);
-  const base64Json = btoa(unescape(encodeURIComponent(updatedJsonText)));
-
-  try {
-    const bodyHtml = { 
-      message: `recipe: HTML ${recipeSha ? 'Update' : 'Add'} ${recipe.title}`, 
-      content: base64Html 
-    };
+    const bodyHtml = { message: `recipe: HTML ${recipeSha ? 'Update' : 'Add'} ${recipe.title}`, content: base64Html };
     if (recipeSha) bodyHtml.sha = recipeSha;
     
     const resHtml = await fetch(recipeUrl, {
       method: "PUT",
-      headers: { 
-        "Authorization": `token ${token}`, 
-        "Content-Type": "application/json" 
-      },
+      headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(bodyHtml)
     });
 
-    if (!resHtml.ok) {
-      const errData = await resHtml.json();
-      alert("HTMLの保存に失敗しました:\n" + JSON.stringify(errData));
+    if (resHtml.ok) {
+      alert(`🎉 画像とレシピHTMLをGitHubへ保存しました！\n（一覧データはGitHub Actionsによって数秒後に自動更新されます）`);
+      return true;
+    } else {
+      const err = await resHtml.json();
+      alert(`HTMLの保存に失敗: ${err.message}`);
       return false;
     }
-
-    const bodyJson = { 
-      message: `recipe-list: ${recipe.title}をアップデート`, 
-      content: base64Json 
-    };
-    if (jsonSha) bodyJson.sha = jsonSha;
-    
-    const resJson = await fetch(jsonUrl, {
-      method: "PUT",
-      headers: { 
-        "Authorization": `token ${token}`, 
-        "Content-Type": "application/json" 
-      },
-      body: JSON.stringify(bodyJson)
-    });
-
-    if (!resJson.ok) {
-      const errData = await resJson.json();
-      alert("JSONの保存に失敗しました:\n" + JSON.stringify(errData));
-      return false;
-    }
-
-    alert("✓ レシピを保存しました！");
-    
-    await new Promise(r => setTimeout(r, 500));
-    await loadRecipeList();
-    
-    return true;
-  } catch (err) {
-    console.error("GitHubアップロード中のエラー:", err);
-    alert("保存中にエラーが発生しました:\n" + err.message);
+  } catch (error) {
+    alert("通信エラーが発生しました: " + error.message);
     return false;
   }
 }
