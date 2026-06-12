@@ -40,28 +40,34 @@ jobs:
             const filePath = path.join(recipesDir, file);
             const html = fs.readFileSync(filePath, "utf8");
             
-            const genreMatch = html.match(/data-genre="([^"]*)"/);
-            const titleMatch = html.match(/data-title="([^"]*)"/);
-            const subtitleMatch = html.match(/data-subtitle="([^"]*)"/);
-            const tagsMatch = html.match(/data-tags="([^"]*)"/);
-            const thumbMatch = html.match(/<img[^>]*id="cardImage"[^>]*src="([^"]*)"/);
+            // 💡 属性のクォーテーションがシングル/ダブルどちらでも対応できるように正規表現を強化
+            const genreMatch = html.match(/data-genre=["\']([^"\']*)["\']/);
+            const titleMatch = html.match(/data-title=["\']([^"\']*)["\']/);
+            const subtitleMatch = html.match(/data-subtitle=["\']([^"\']*)["\']/);
+            const tagsMatch = html.match(/data-tags=["\']([^"\']*)["\']/);
+            const thumbMatch = html.match(/<img[^>]*id=["\']cardImage["\'][^>]*src=["\']([^"\']*)["\']/);
             
-            if (titleMatch) {
-              // 💡 HTML内の画像パス（../images/〜）から、トップページ用のパス（images/〜）に自動変換
-              let thumbPath = thumbMatch ? thumbMatch[1] : "";
-              if (thumbPath.startsWith("../")) {
-                thumbPath = thumbPath.replace(/^\.\.\//, "");
-              }
-
-              list.push({
-                genre: (genreMatch && genreMatch[1]) ? genreMatch[1] : "主食",
-                title: titleMatch[1],
-                subtitle: (subtitleMatch && subtitleMatch[1]) ? subtitleMatch[1] : "",
-                tags: (tagsMatch && tagsMatch[1]) ? tagsMatch[1].split(",").map(t => t.trim()).filter(t => t) : [],
-                thumb: thumbPath,
-                file: file
-              });
+            // 💡 もしHTML内に属性がない場合の救出策（<title>タグや、最悪ファイル名からタイトルを取得）
+            const htmlTitleMatch = html.match(/<title>([^<]*)<\/title>/i);
+            const fallbackTitle = (htmlTitleMatch && htmlTitleMatch[1]) ? htmlTitleMatch[1].trim() : file.replace(".html", "");
+            
+            // タイトル属性があればそれを使い、なければ救出策のタイトルを使う
+            const finalTitle = (titleMatch && titleMatch[1]) ? titleMatch[1] : fallbackTitle;
+            
+            let thumbPath = thumbMatch ? thumbMatch[1] : "";
+            if (thumbPath.startsWith("../")) {
+              thumbPath = thumbPath.replace(/^\.\.\//, "");
             }
+
+            // 💡 条件を緩めて、どんなHTMLファイルでも必ずリストに含めるように変更
+            list.push({
+              genre: (genreMatch && genreMatch[1]) ? genreMatch[1] : "未分類",
+              title: finalTitle,
+              subtitle: (subtitleMatch && subtitleMatch[1]) ? subtitleMatch[1] : "",
+              tags: (tagsMatch && tagsMatch[1]) ? tagsMatch[1].split(",").map(t => t.trim()).filter(t => t) : [],
+              thumb: thumbPath,
+              file: file
+            });
           });
           
           fs.writeFileSync("recipe-list.json", JSON.stringify(list, null, 2));
@@ -72,4 +78,4 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add recipe-list.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: Auto-generate recipe-list.json" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: Auto-generate recipe-list.json (Robust Version)" && git push)
