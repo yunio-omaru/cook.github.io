@@ -21,131 +21,28 @@
       max-width: 900px;
       margin: 0 auto;
     }
-    h1 {
-      margin-top: 0;
-      color: #333;
-      text-align: center;
-    }
+    h1 { margin-top: 0; color: #333; text-align: center; }
     .setup-section {
-      background: #f7fafc;
-      padding: 1.5rem;
-      border-radius: 0.75rem;
-      margin-bottom: 2rem;
-      border-left: 4px solid #667eea;
+      background: #f7fafc; padding: 1.5rem; border-radius: 0.75rem; margin-bottom: 2rem; border-left: 4px solid #667eea;
     }
-    .setup-section h2 {
-      margin-top: 0;
-      color: #2d3748;
-      font-size: 1rem;
-    }
-    .form-row {
-      margin-bottom: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-    }
-    .form-row label {
-      font-size: 0.9rem;
-      color: #4a5568;
-      font-weight: 600;
-    }
-    .form-row input {
-      padding: 0.75rem;
-      border: 1px solid #cbd5e0;
-      border-radius: 0.5rem;
-      font-size: 0.9rem;
-      font-family: monospace;
-    }
-    .form-row input:focus {
-      outline: none;
-      border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-    .buttons {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-top: 1.5rem;
-    }
-    button {
-      flex: 1;
-      min-width: 150px;
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 0.5rem;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    .btn-primary {
-      background: #667eea;
-      color: white;
-    }
-    .btn-primary:hover:not(:disabled) {
-      background: #5568d3;
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-    }
-    .btn-primary:disabled {
-      background: #cbd5e0;
-      cursor: not-allowed;
-    }
-    .status {
-      margin-top: 2rem;
-      padding: 1.5rem;
-      border-radius: 0.75rem;
-      display: none;
-    }
-    .status.show {
-      display: block;
-    }
-    .status.success {
-      background: #c6f6d5;
-      border: 1px solid #9ae6b4;
-      color: #22543d;
-    }
-    .status.error {
-      background: #fed7d7;
-      border: 1px solid #fc8181;
-      color: #742a2a;
-    }
-    .status.info {
-      background: #bee3f8;
-      border: 1px solid #90cdf4;
-      color: #2c5282;
-    }
-    .progress {
-      margin-top: 1rem;
-      background: #e2e8f0;
-      height: 8px;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .progress-bar {
-      height: 100%;
-      background: #667eea;
-      width: 0%;
-      transition: width 0.3s;
-    }
-    .log {
-      margin-top: 1rem;
-      background: #f7fafc;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      max-height: 300px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 0.85rem;
-      color: #4a5568;
-    }
-    .log-item {
-      padding: 0.25rem 0;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .log-item:last-child {
-      border-bottom: none;
-    }
+    .setup-section h2 { margin-top: 0; color: #2d3748; font-size: 1rem; }
+    .form-row { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.3rem; }
+    .form-row label { font-size: 0.9rem; color: #4a5568; font-weight: 600; }
+    .form-row input { padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 0.5rem; font-size: 0.9rem; font-family: monospace; }
+    .form-row input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+    .buttons { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
+    button { flex: 1; min-width: 150px; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-primary:hover:not(:disabled) { background: #5568d3; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+    .status { margin-top: 2rem; padding: 1.5rem; border-radius: 0.75rem; display: none; }
+    .status.show { display: block; }
+    .status.success { background: #c6f6d5; border: 1px solid #9ae6b4; color: #22543d; }
+    .status.error { background: #fed7d7; border: 1px solid #fc8181; color: #742a2a; }
+    .status.info { background: #bee3f8; border: 1px solid #90cdf4; color: #2c5282; }
+    .progress { margin-top: 1rem; background: #e2e8f0; height: 8px; border-radius: 999px; overflow: hidden; }
+    .progress-bar { height: 100%; background: #667eea; width: 0%; transition: width 0.3s; }
+    .log { margin-top: 1rem; background: #f7fafc; padding: 1rem; border-radius: 0.5rem; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; color: #4a5568; }
+    .log-item { padding: 0.25rem 0; border-bottom: 1px solid #e2e8f0; }
     .log-success { color: #276749; }
     .log-error { color: #742a2a; }
     .log-info { color: #2c5282; }
@@ -164,9 +61,6 @@
       <div class="form-row">
         <label>個人アクセストークン（PAT）</label>
         <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" />
-      </div>
-      <div style="font-size: 0.85rem; color: #4a5568; margin-top: 0.5rem;">
-        💡 <strong>トークンの作成方法：</strong> GitHub → Settings → Developer settings → Personal access tokens → Generate new token → repo スコープを選択
       </div>
     </div>
 
@@ -194,7 +88,7 @@
     }
 
     function updateProgress(current, total) {
-      const percent = (current / total) * 100;
+      const percent = total > 0 ? (current / total) * 100 : 0;
       document.getElementById('progressBar').style.width = percent + '%';
     }
 
@@ -214,247 +108,203 @@
         return;
       }
 
-      const statusDiv = document.getElementById('status');
       document.getElementById('log').innerHTML = '';
-      statusDiv.classList.add('show');
-
-      log('🔍 レシピファイルを取得中...', 'info');
+      document.getElementById('status').classList.add('show');
       showStatus('処理中...', 'info');
 
       try {
-        // Step 1: recipesフォルダ内の全てのHTMLファイルを取得
-        const recipeFiles = await getRecipeFiles(user, token);
-        log(`✓ ${recipeFiles.length} 個のレシピファイルを検出`, 'success');
+        // Step 1: recipe-list.json の取得と安全なパース
+        log('📝 recipe-list.json を取得中...', 'info');
+        const jsonContentObj = await getRecipeListJson(user, token);
+        let recipeList = jsonContentObj.data;
+        const jsonSha = jsonContentObj.sha;
+        log(`✓ recipe-list.json を検出（エントリー数: ${recipeList.length}）`, 'success');
 
-        // Step 2: 各ファイルから画像を抽出
-        const images = {};
-        for (let i = 0; i < recipeFiles.length; i++) {
-          updateProgress(i, recipeFiles.length);
-          const file = recipeFiles[i];
-          log(`処理中: ${file.name}`, 'info');
-          
-          let content;
+        // Step 2: 各レシピHTMLから画像を抽出（インデックスベースではなく、ファイル名ベースで管理）
+        const imagesToUpload = {};
+        const imageFileMapping = {}; // HTMLファイル名 -> 新しい画像ファイル名
+
+        for (let i = 0; i < recipeList.length; i++) {
+          updateProgress(i, recipeList.length);
+          const recipe = recipeList[i];
+          log(`処理中: ${recipe.file}`, 'info');
+
+          let htmlContent = '';
           try {
-            content = await getFileContent(user, token, file.path);
-          } catch (fileErr) {
-            // 💡 レシピファイル個別のエラーを特定できるようにログ出力を強化
-            log(`❌ レシピ読み込みエラー [対象: ${file.name}]: ${fileErr.message}`, 'error');
-            throw fileErr;
+            htmlContent = await getFileContent(user, token, `recipes/${recipe.file}`);
+          } catch (e) {
+            log(`⚠️ HTMLが取得できないためスキップします: ${recipe.file}`, 'info');
+            continue;
           }
 
-          const imageData = extractBase64Image(content);
-          
+          const imageData = extractBase64Image(htmlContent);
           if (imageData) {
             const ext = imageData.format === 'png' ? 'png' : 'jpg';
-            const imageName = `recipe_${String(i + 1).padStart(2, '0')}.${ext}`;
-            // 💡 どのHTMLファイルからどの画像名が生成されたかの関係を保持
-            images[imageName] = { data: imageData.data, originFile: file.name };
-            log(`✓ 画像抽出成功 [対象: ${file.name}] → ${imageName}`, 'success');
+            // 💡 一意の画像名を作成（レシピのHTML名英数化か、重複を防ぐインデックス番号）
+            const targetImageName = `recipe_generated_${String(i + 1).padStart(2, '0')}.${ext}`;
+            
+            imagesToUpload[targetImageName] = { data: imageData.data, originFile: recipe.file };
+            imageFileMapping[recipe.file] = targetImageName;
+            
+            log(`✓ 画像抽出成功 [${recipe.file}] -> ${targetImageName}`, 'success');
+          } else {
+            log(`  ↳ 埋め込み画像なし、または既に移行済みです。`, 'info');
+          }
+        }
+        updateProgress(recipeList.length, recipeList.length);
+
+        // Step 3: 画像のアップロード処理（既存チェック・sha上書き対応）
+        const uploadedImageNames = {};
+        if (Object.keys(imagesToUpload).length > 0) {
+          log(`📤 ${Object.keys(imagesToUpload).length} 個の画像をGitHubへアップロード中...`, 'info');
+          for (const [imgName, imgObj] of Object.entries(imagesToUpload)) {
+            const successName = await uploadSingleImage(user, token, imgName, imgObj.data, imgObj.originFile);
+            if (successName) {
+              uploadedImageNames[imgName] = successName;
+            }
+          }
+        } else {
+          log('📤 新たにアップロードする画像はありません。', 'info');
+        }
+
+        // Step 4: 各レシピHTMLの `src="data:..."` を `src="../images/..."` に一括書き換え
+        log('🔄 レシピHTMLファイルを更新中...', 'info');
+        for (let i = 0; i < recipeList.length; i++) {
+          const recipe = recipeList[i];
+          const mappedImg = imageFileMapping[recipe.file];
+          if (!mappedImg) continue;
+
+          log(`HTML更新中: ${recipe.file}`, 'info');
+          let htmlContent = await getFileContent(user, token, `recipes/${recipe.file}`);
+          
+          // 現時点の最新のshaを取得するために個別メタデータ取得
+          const fileMeta = await getFileMeta(user, token, `recipes/${recipe.file}`);
+
+          htmlContent = htmlContent.replace(
+            /src="data:image\/[^;]+;base64,[^"]+"/g,
+            `src="../images/${mappedImg}"`
+          );
+
+          await updateFileOnGitHub(user, token, `recipes/${recipe.file}`, htmlContent, `update: ${recipe.file} 画像参照化`, fileMeta.sha);
+          log(`✓ HTML更新完了: ${recipe.file}`, 'success');
+        }
+
+        // Step 5: recipe-list.json の狂った項目（DataURL等）を綺麗な `images/recipe_xx.jpg` に整えて上書き
+        log('📝 recipe-list.json のクリーンアップと更新を実行中...', 'info');
+        for (let i = 0; i < recipeList.length; i++) {
+          const recipe = recipeList[i];
+          const mappedImg = imageFileMapping[recipe.file];
+          
+          if (mappedImg) {
+            recipe.thumb = `images/${mappedImg}`;
+          } else if (recipe.thumb && recipe.thumb.startsWith('data:image')) {
+            // もしHTML側に画像がなくてJSON側だけに壊れたBase64がある場合、一度クリアしてプレースホルダー表示に回す
+            recipe.thumb = "";
           }
         }
 
-        updateProgress(recipeFiles.length, recipeFiles.length);
+        const updatedJsonText = JSON.stringify(recipeList, null, 2);
+        await updateFileOnGitHub(user, token, 'recipe-list.json', updatedJsonText, 'chore: クリーンアップおよび画像パス最適化', jsonSha);
+        log('✓ recipe-list.json を完全に正常化して保存しました！', 'success');
 
-        // Step 3: 画像をアップロード
-        log(`📤 ${Object.keys(images).length} 個の画像をアップロード中...`, 'info');
-        const imageNames = await uploadImages(user, token, images);
-
-        // Step 4: recipe-list.json を更新
-        log('📝 recipe-list.json を更新中...', 'info');
-        await updateRecipeListJson(user, token, imageNames, recipeFiles);
-
-        // Step 5: 各レシピHTMLを更新
-        log('🔄 レシピHTMLを更新中...', 'info');
-        await updateRecipeHtmlFiles(user, token, imageNames, recipeFiles);
-
-        showStatus('✅ 全ての処理が完了しました！<br>ページをリロードして確認してください。', 'success');
-        log('🎉 処理完了！', 'success');
+        showStatus('✅ すべての処理が完了しました！破損していたJSONもクリーンアップされました。', 'success');
+        log('🎉 すべてのプロセスが正常終了しました！', 'success');
 
       } catch (err) {
-        showStatus(`❌ エラーが発生しました: ${err.message}`, 'error');
-        log(`エラー終了: ${err.message}`, 'error');
+        showStatus(`❌ エラー終了: ${err.message}`, 'error');
+        log(`エラー詳細: ${err.message}`, 'error');
         console.error(err);
       }
     }
 
-    async function getRecipeFiles(user, token) {
-      const url = `https://api.github.com/repos/${user}/cook.github.io/contents/recipes`;
-      const res = await fetch(url, {
-        headers: { "Authorization": `token ${token}` }
-      });
-      if (!res.ok) throw new Error('レシピフォルダの取得に失敗');
-      const files = await res.json();
-      return files.filter(f => f.name.endsWith('.html') && f.name !== '.gitkeep');
+    async function getRecipeListJson(user, token) {
+      const url = `https://api.github.com/repos/${user}/cook.github.io/contents/recipe-list.json`;
+      const res = await fetch(url, { headers: { "Authorization": `token ${token}`, "Cache-Control": "no-cache" } });
+      
+      if (!res.ok) return { data: [], sha: null };
+      
+      const jsonMeta = await res.json();
+      let rawText = '';
+      try {
+        rawText = decodeURIComponent(escape(atob(jsonMeta.content)));
+        // 💡 読めない不正なBase64をここで強制補正・パース
+        const cleanJson = rawText.replace(/"thumb":\s*"data:image\/[^"]+(\n|\r|.)*?"file"/g, '"thumb": "",\n"file"');
+        return { data: JSON.parse(cleanJson), sha: jsonMeta.sha };
+      } catch (e) {
+        log('⚠️ JSONファイルが破損している形跡があるため、テキスト置換を試みます。', 'info');
+        try {
+          // 強制パース失敗時の最終防衛ライン
+          const fixedText = rawText.substring(0, rawText.lastIndexOf(']实时') + 1) || rawText;
+          return { data: JSON.parse(fixedText), sha: jsonMeta.sha };
+        } catch(err) {
+          throw new Error('recipe-list.json の構造が解析不可能です。手動修復が必要です。');
+        }
+      }
     }
 
     async function getFileContent(user, token, path) {
       const url = `https://api.github.com/repos/${user}/cook.github.io/contents/${path}`;
-      const res = await fetch(url, {
-        headers: { "Authorization": `token ${token}` }
-      });
-      if (!res.ok) throw new Error(`ファイル取得失敗: ${path}`);
+      const res = await fetch(url, { headers: { "Authorization": `token ${token}`, "Cache-Control": "no-cache" } });
+      if (!res.ok) throw new Error(`取得失敗: ${path}`);
       const data = await res.json();
       return decodeURIComponent(escape(atob(data.content)));
+    }
+
+    async function getFileMeta(user, token, path) {
+      const url = `https://api.github.com/repos/${user}/cook.github.io/contents/${path}`;
+      const res = await fetch(url, { headers: { "Authorization": `token ${token}`, "Cache-Control": "no-cache" } });
+      if (!res.ok) throw new Error(`メタデータ取得失敗: ${path}`);
+      return await res.json();
     }
 
     function extractBase64Image(htmlContent) {
       const match = htmlContent.match(/src="(data:image\/(png|jpeg|jpg|gif|webp);base64,[^"]+)"/);
       if (!match) return null;
-
-      const dataUrl = match[1];
-      const format = match[2];
-      const base64Data = dataUrl.split(',')[1];
-
-      return { data: base64Data, format };
+      return { data: match[1].split(',')[1], format: match[2] };
     }
 
-    async function uploadImages(user, token, images) {
-      const repo = 'cook.github.io';
-      const imageNames = {};
-
-      for (const [imageName, imageObj] of Object.entries(images)) {
-        const base64Data = imageObj.data;
-        const originFile = imageObj.originFile; // 元のレシピファイル名
-        
-        const path = `images/${imageName}`;
-        const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
-
-        // 💡 【修正点1】すでに同じ画像が存在するか事前にチェックし、存在する場合は sha を取得して上書きに対応させる
-        let existingSha = null;
-        try {
-          const checkRes = await fetch(url, {
-            headers: { "Authorization": `token ${token}` }
-          });
-          if (checkRes.ok) {
-            const checkData = await checkRes.json();
-            existingSha = checkData.sha;
-          }
-        } catch (e) {
-          // 存在しない場合は新規追加なのでスルー
+    async function uploadSingleImage(user, token, imageName, base64Data, originFile) {
+      const url = `https://api.github.com/repos/${user}/cook.github.io/contents/images/${imageName}`;
+      
+      let existingSha = null;
+      try {
+        const check = await fetch(url, { headers: { "Authorization": `token ${token}` } });
+        if (check.ok) {
+          const checkData = await check.json();
+          existingSha = checkData.sha;
         }
+      } catch(e) {}
 
-        const body = {
-          message: `add: レシピ画像 ${imageName} (元: ${originFile})`,
-          content: base64Data
-        };
-        
-        if (existingSha) {
-          body.sha = existingSha; // 💡 これで既存画像があっても弾かれずに上書き更新になります
-        }
+      const body = { message: `add: 画像 ${imageName} (from: ${originFile})`, content: base64Data };
+      if (existingSha) body.sha = existingSha;
 
-        const res = await fetch(url, {
-          method: 'PUT',
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(body)
-        });
-
-        // 💡 【修正点2】レスポンスが空、またはエラーの際のクラッシュ安全装置
-        if (!res.ok) {
-          let errMsg = `ステータス ${res.status}`;
-          if (res.status !== 204) {
-            try {
-              const errJson = await res.json();
-              errMsg = errJson.message || errMsg;
-            } catch (pErr) {
-              errMsg = await res.text() || errMsg;
-            }
-          }
-          // 💡 どのレシピHTML由来の画像でエラーになったかを明確に出力
-          throw new Error(`画像アップロード失敗 [画像名: ${imageName} / 対象レシピ: ${originFile}]: ${errMsg}`);
-        }
-
-        log(`✓ アップロード成功: ${imageName} [対象レシピ: ${originFile}]`, 'success');
-        imageNames[imageName] = imageName;
-      }
-
-      return imageNames;
-    }
-
-    async function updateRecipeListJson(user, token, imageNames, recipeFiles) {
-      const jsonUrl = `https://api.github.com/repos/${user}/cook.github.io/contents/recipe-list.json`;
-      const jsonRes = await fetch(jsonUrl, {
-        headers: { "Authorization": `token ${token}` }
-      });
-
-      if (!jsonRes.ok) throw new Error('recipe-list.json の取得に失敗');
-
-      const jsonData = await jsonRes.json();
-      const recipeList = JSON.parse(decodeURIComponent(escape(atob(jsonData.content))));
-
-      for (let i = 0; i < recipeList.length; i++) {
-        const imageName = `recipe_${String(i + 1).padStart(2, '0')}.jpg`;
-        if (imageNames[imageName] || imageNames[imageName.replace('.jpg', '.png')]) {
-          const actualName = imageNames[imageName] || imageNames[imageName.replace('.jpg', '.png')];
-          recipeList[i].thumb = `images/${actualName}`;
-        }
-      }
-
-      const updatedJson = JSON.stringify(recipeList, null, 2);
-      const base64Json = btoa(unescape(encodeURIComponent(updatedJson)));
-
-      const updateRes = await fetch(jsonUrl, {
+      const res = await fetch(url, {
         method: 'PUT',
-        headers: {
-          "Authorization": `token ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: 'update: recipe-list.json - 画像パスを更新',
-          content: base64Json,
-          sha: jsonData.sha
-        })
+        headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body)
       });
 
-      if (!updateRes.ok) throw new Error('recipe-list.json のアップロードに失敗');
-      log('✓ recipe-list.json を更新', 'success');
+      if (!res.ok) {
+        throw new Error(`画像アップロード失敗 [${imageName}]: ステータス ${res.status}`);
+      }
+      log(`✓ アップロード完了: ${imageName} [対象: ${originFile}]`, 'success');
+      return imageName;
     }
 
-    async function updateRecipeHtmlFiles(user, token, imageNames, recipeFiles) {
-      for (let i = 0; i < recipeFiles.length; i++) {
-        const file = recipeFiles[i];
-        let content;
-        try {
-          content = await getFileContent(user, token, file.path);
-        } catch (fErr) {
-          throw new Error(`レシピHTMLの同期失敗 [対象: ${file.name}]: ${fErr.message}`);
-        }
+    async function updateFileOnGitHub(user, token, path, content, message, sha) {
+      const url = `https://api.github.com/repos/${user}/cook.github.io/contents/${path}`;
+      const base64Data = btoa(unescape(encodeURIComponent(content)));
+      
+      const body = { message: message, content: base64Data };
+      if (sha) body.sha = sha;
 
-        const imageName = `recipe_${String(i + 1).padStart(2, '0')}.jpg`;
-        const actualImageName = imageNames[imageName] || imageNames[imageName.replace('.jpg', '.png')] || imageName;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
 
-        content = content.replace(
-          /src="data:image\/[^;]+;base64,[^"]+"/g,
-          `src="../images/${actualImageName}"`
-        );
-
-        const base64Html = btoa(unescape(encodeURIComponent(content)));
-        const updateUrl = `https://api.github.com/repos/${user}/cook.github.io/contents/${file.path}`;
-
-        const updateRes = await fetch(updateUrl, {
-          method: 'PUT',
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            message: `update: ${file.name} - 画像パスを外部参照に変更`,
-            content: base64Html,
-            sha: file.sha
-          })
-        });
-
-        if (!updateRes.ok) {
-          let hErrMsg = `ステータス ${updateRes.status}`;
-          if (updateRes.status !== 204) {
-            try { hErrMsg = (await updateRes.json()).message || hErrMsg; } catch(e) {}
-          }
-          throw new Error(`HTMLファイル更新失敗 [対象: ${file.name}]: ${hErrMsg}`);
-        }
-        log(`✓ 外部画像化完了: ${file.name}`, 'success');
-      }
+      if (!res.ok) throw new Error(`${path} のGitHub保存に失敗しました。`);
     }
   </script>
 </body>
