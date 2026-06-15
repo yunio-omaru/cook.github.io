@@ -233,14 +233,23 @@
           const file = recipeFiles[i];
           log(`処理中: ${file.name}`, 'info');
           
-          const content = await getFileContent(user, token, file.path);
+          let content;
+          try {
+            content = await getFileContent(user, token, file.path);
+          } catch (fileErr) {
+            // 💡 レシピファイル個別のエラーを特定できるようにログ出力を強化
+            log(`❌ レシピ読み込みエラー [対象: ${file.name}]: ${fileErr.message}`, 'error');
+            throw fileErr;
+          }
+
           const imageData = extractBase64Image(content);
           
           if (imageData) {
             const ext = imageData.format === 'png' ? 'png' : 'jpg';
             const imageName = `recipe_${String(i + 1).padStart(2, '0')}.${ext}`;
-            images[imageName] = imageData.data;
-            log(`✓ 画像抽出: ${imageName}`, 'success');
+            // 💡 どのHTMLファイルからどの画像名が生成されたかの関係を保持
+            images[imageName] = { data: imageData.data, originFile: file.name };
+            log(`✓ 画像抽出成功 [対象: ${file.name}] → ${imageName}`, 'success');
           }
         }
 
@@ -263,7 +272,7 @@
 
       } catch (err) {
         showStatus(`❌ エラーが発生しました: ${err.message}`, 'error');
-        log(`エラー: ${err.message}`, 'error');
+        log(`エラー終了: ${err.message}`, 'error');
         console.error(err);
       }
     }
@@ -303,14 +312,35 @@
       const repo = 'cook.github.io';
       const imageNames = {};
 
-      for (const [imageName, base64Data] of Object.entries(images)) {
+      for (const [imageName, imageObj] of Object.entries(images)) {
+        const base64Data = imageObj.data;
+        const originFile = imageObj.originFile; // 元のレシピファイル名
+        
         const path = `images/${imageName}`;
         const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
 
+        // 💡 【修正点1】すでに同じ画像が存在するか事前にチェックし、存在する場合は sha を取得して上書きに対応させる
+        let existingSha = null;
+        try {
+          const checkRes = await fetch(url, {
+            headers: { "Authorization": `token ${token}` }
+          });
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            existingSha = checkData.sha;
+          }
+        } catch (e) {
+          // 存在しない場合は新規追加なのでスルー
+        }
+
         const body = {
-          message: `add: レシピ画像 ${imageName}`,
+          message: `add: レシピ画像 ${imageName} (元: ${originFile})`,
           content: base64Data
         };
+        
+        if (existingSha) {
+          body.sha = existingSha; // 💡 これで既存画像があっても弾かれずに上書き更新になります
+        }
 
         const res = await fetch(url, {
           method: 'PUT',
@@ -321,12 +351,22 @@
           body: JSON.stringify(body)
         });
 
+        // 💡 【修正点2】レスポンスが空、またはエラーの際のクラッシュ安全装置
         if (!res.ok) {
-          const err = await res.json();
-          throw new Error(`画像アップロード失敗 ${imageName}: ${err.message}`);
+          let errMsg = `ステータス ${res.status}`;
+          if (res.status !== 204) {
+            try {
+              const errJson = await res.json();
+              errMsg = errJson.message || errMsg;
+            } catch (pErr) {
+              errMsg = await res.text() || errMsg;
+            }
+          }
+          // 💡 どのレシピHTML由来の画像でエラーになったかを明確に出力
+          throw new Error(`画像アップロード失敗 [画像名: ${imageName} / 対象レシピ: ${originFile}]: ${errMsg}`);
         }
 
-        log(`✓ アップロード: ${imageName}`, 'success');
+        log(`✓ アップロード成功: ${imageName} [対象レシピ: ${originFile}]`, 'success');
         imageNames[imageName] = imageName;
       }
 
@@ -334,7 +374,6 @@
     }
 
     async function updateRecipeListJson(user, token, imageNames, recipeFiles) {
-      // recipe-list.json を取得
       const jsonUrl = `https://api.github.com/repos/${user}/cook.github.io/contents/recipe-list.json`;
       const jsonRes = await fetch(jsonUrl, {
         headers: { "Authorization": `token ${token}` }
@@ -345,7 +384,6 @@
       const jsonData = await jsonRes.json();
       const recipeList = JSON.parse(decodeURIComponent(escape(atob(jsonData.content))));
 
-      // 画像パスを更新
       for (let i = 0; i < recipeList.length; i++) {
         const imageName = `recipe_${String(i + 1).padStart(2, '0')}.jpg`;
         if (imageNames[imageName] || imageNames[imageName.replace('.jpg', '.png')]) {
@@ -354,7 +392,6 @@
         }
       }
 
-      // アップロード
       const updatedJson = JSON.stringify(recipeList, null, 2);
       const base64Json = btoa(unescape(encodeURIComponent(updatedJson)));
 
@@ -378,18 +415,21 @@
     async function updateRecipeHtmlFiles(user, token, imageNames, recipeFiles) {
       for (let i = 0; i < recipeFiles.length; i++) {
         const file = recipeFiles[i];
-        let content = await getFileContent(user, token, file.path);
+        let content;
+        try {
+          content = await getFileContent(user, token, file.path);
+        } catch (fErr) {
+          throw new Error(`レシピHTMLの同期失敗 [対象: ${file.name}]: ${fErr.message}`);
+        }
 
         const imageName = `recipe_${String(i + 1).padStart(2, '0')}.jpg`;
         const actualImageName = imageNames[imageName] || imageNames[imageName.replace('.jpg', '.png')] || imageName;
 
-        // src="data:image/..." を src="images/..." に置換
         content = content.replace(
           /src="data:image\/[^;]+;base64,[^"]+"/g,
           `src="../images/${actualImageName}"`
         );
 
-        // アップロード
         const base64Html = btoa(unescape(encodeURIComponent(content)));
         const updateUrl = `https://api.github.com/repos/${user}/cook.github.io/contents/${file.path}`;
 
@@ -406,8 +446,14 @@
           })
         });
 
-        if (!updateRes.ok) throw new Error(`HTMLファイル更新失敗: ${file.name}`);
-        log(`✓ 更新: ${file.name}`, 'success');
+        if (!updateRes.ok) {
+          let hErrMsg = `ステータス ${updateRes.status}`;
+          if (updateRes.status !== 204) {
+            try { hErrMsg = (await updateRes.json()).message || hErrMsg; } catch(e) {}
+          }
+          throw new Error(`HTMLファイル更新失敗 [対象: ${file.name}]: ${hErrMsg}`);
+        }
+        log(`✓ 外部画像化完了: ${file.name}`, 'success');
       }
     }
   </script>
