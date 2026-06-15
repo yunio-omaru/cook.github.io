@@ -113,16 +113,16 @@
       showStatus('処理中...', 'info');
 
       try {
-        // Step 1: recipe-list.json の取得と安全なパース
-        log('📝 recipe-list.json を取得中...', 'info');
-        const jsonContentObj = await getRecipeListJson(user, token);
+        // Step 1: recipe-list.json の大容量対応ダウンロード
+        log('📝 recipe-list.json を取得中 (大容量ファイルモード) ...', 'info');
+        const jsonContentObj = await getLargeRecipeListJson(user, token);
         let recipeList = jsonContentObj.data;
         const jsonSha = jsonContentObj.sha;
-        log(`✓ recipe-list.json を検出（エントリー数: ${recipeList.length}）`, 'success');
+        log(`✓ recipe-list.json を無事取得完了 (レシピ数: ${recipeList.length} 件)`, 'success');
 
-        // Step 2: 各レシピHTMLから画像を抽出（インデックスベースではなく、ファイル名ベースで管理）
+        // Step 2: 各レシピHTMLから画像を抽出（ファイル名ベースで安全に管理）
         const imagesToUpload = {};
-        const imageFileMapping = {}; // HTMLファイル名 -> 新しい画像ファイル名
+        const imageFileMapping = {};
 
         for (let i = 0; i < recipeList.length; i++) {
           updateProgress(i, recipeList.length);
@@ -131,7 +131,8 @@
 
           let htmlContent = '';
           try {
-            htmlContent = await getFileContent(user, token, `recipes/${recipe.file}`);
+            // HTMLも画像内蔵で大きくなっている可能性があるため大容量モードで取得
+            htmlContent = await getLargeFileContent(user, token, `recipes/${recipe.file}`);
           } catch (e) {
             log(`⚠️ HTMLが取得できないためスキップします: ${recipe.file}`, 'info');
             continue;
@@ -140,7 +141,6 @@
           const imageData = extractBase64Image(htmlContent);
           if (imageData) {
             const ext = imageData.format === 'png' ? 'png' : 'jpg';
-            // 💡 一意の画像名を作成（レシピのHTML名英数化か、重複を防ぐインデックス番号）
             const targetImageName = `recipe_generated_${String(i + 1).padStart(2, '0')}.${ext}`;
             
             imagesToUpload[targetImageName] = { data: imageData.data, originFile: recipe.file };
@@ -154,20 +154,16 @@
         updateProgress(recipeList.length, recipeList.length);
 
         // Step 3: 画像のアップロード処理（既存チェック・sha上書き対応）
-        const uploadedImageNames = {};
         if (Object.keys(imagesToUpload).length > 0) {
           log(`📤 ${Object.keys(imagesToUpload).length} 個の画像をGitHubへアップロード中...`, 'info');
           for (const [imgName, imgObj] of Object.entries(imagesToUpload)) {
-            const successName = await uploadSingleImage(user, token, imgName, imgObj.data, imgObj.originFile);
-            if (successName) {
-              uploadedImageNames[imgName] = successName;
-            }
+            await uploadSingleImage(user, token, imgName, imgObj.data, imgObj.originFile);
           }
         } else {
           log('📤 新たにアップロードする画像はありません。', 'info');
         }
 
-        // Step 4: 各レシピHTMLの `src="data:..."` を `src="../images/..."` に一括書き換え
+        // Step 4: 各レシピHTMLの一括書き換え
         log('🔄 レシピHTMLファイルを更新中...', 'info');
         for (let i = 0; i < recipeList.length; i++) {
           const recipe = recipeList[i];
@@ -175,9 +171,9 @@
           if (!mappedImg) continue;
 
           log(`HTML更新中: ${recipe.file}`, 'info');
-          let htmlContent = await getFileContent(user, token, `recipes/${recipe.file}`);
+          let htmlContent = await getLargeFileContent(user, token, `recipes/${recipe.file}`);
           
-          // 現時点の最新のshaを取得するために個別メタデータ取得
+          // 最新のshaを取得
           const fileMeta = await getFileMeta(user, token, `recipes/${recipe.file}`);
 
           htmlContent = htmlContent.replace(
@@ -189,8 +185,8 @@
           log(`✓ HTML更新完了: ${recipe.file}`, 'success');
         }
 
-        // Step 5: recipe-list.json の狂った項目（DataURL等）を綺麗な `images/recipe_xx.jpg` に整えて上書き
-        log('📝 recipe-list.json のクリーンアップと更新を実行中...', 'info');
+        // Step 5: recipe-list.json の大掃除
+        log('📝 recipe-list.json の画像パスを外部ファイル参照に整えて保存中...', 'info');
         for (let i = 0; i < recipeList.length; i++) {
           const recipe = recipeList[i];
           const mappedImg = imageFileMapping[recipe.file];
@@ -198,16 +194,16 @@
           if (mappedImg) {
             recipe.thumb = `images/${mappedImg}`;
           } else if (recipe.thumb && recipe.thumb.startsWith('data:image')) {
-            // もしHTML側に画像がなくてJSON側だけに壊れたBase64がある場合、一度クリアしてプレースホルダー表示に回す
+            // 万が一HTML側に画像がなくJSON側だけに巨大データが残っていた場合はクリア
             recipe.thumb = "";
           }
         }
 
         const updatedJsonText = JSON.stringify(recipeList, null, 2);
         await updateFileOnGitHub(user, token, 'recipe-list.json', updatedJsonText, 'chore: クリーンアップおよび画像パス最適化', jsonSha);
-        log('✓ recipe-list.json を完全に正常化して保存しました！', 'success');
+        log('✓ recipe-list.json を完全に軽量・正常化しました！', 'success');
 
-        showStatus('✅ すべての処理が完了しました！破損していたJSONもクリーンアップされました。', 'success');
+        showStatus('✅ すべての処理が正常に完了しました！<br>巨大だったJSONファイルも軽量化され、次からは爆速で動きます。', 'success');
         log('🎉 すべてのプロセスが正常終了しました！', 'success');
 
       } catch (err) {
@@ -217,37 +213,43 @@
       }
     }
 
-    async function getRecipeListJson(user, token) {
-      const url = `https://api.github.com/repos/${user}/cook.github.io/contents/recipe-list.json`;
-      const res = await fetch(url, { headers: { "Authorization": `token ${token}`, "Cache-Control": "no-cache" } });
+    // 💡 1MB以上の大容量JSONファイルに対応した最強のデータ取得関数
+    async function getLargeRecipeListJson(user, token) {
+      const metaUrl = `https://api.github.com/repos/${user}/cook.github.io/contents/recipe-list.json`;
+      const metaRes = await fetch(metaUrl, { headers: { "Authorization": `token ${token}`, "Cache-Control": "no-cache" } });
       
-      if (!res.ok) return { data: [], sha: null };
+      if (!metaRes.ok) return { data: [], sha: null };
+      const metaData = await metaRes.json();
       
-      const jsonMeta = await res.json();
-      let rawText = '';
-      try {
-        rawText = decodeURIComponent(escape(atob(jsonMeta.content)));
-        // 💡 読めない不正なBase64をここで強制補正・パース
-        const cleanJson = rawText.replace(/"thumb":\s*"data:image\/[^"]+(\n|\r|.)*?"file"/g, '"thumb": "",\n"file"');
-        return { data: JSON.parse(cleanJson), sha: jsonMeta.sha };
-      } catch (e) {
-        log('⚠️ JSONファイルが破損している形跡があるため、テキスト置換を試みます。', 'info');
-        try {
-          // 強制パース失敗時の最終防衛ライン
-          const fixedText = rawText.substring(0, rawText.lastIndexOf(']实时') + 1) || rawText;
-          return { data: JSON.parse(fixedText), sha: jsonMeta.sha };
-        } catch(err) {
-          throw new Error('recipe-list.json の構造が解析不可能です。手動修復が必要です。');
-        }
-      }
+      // 💡 サイズ制限のない Blob API を経由してデータを取得する
+      const blobUrl = `https://api.github.com/repos/${user}/cook.github.io/git/blobs/${metaData.sha}`;
+      const blobRes = await fetch(blobUrl, { headers: { "Authorization": `token ${token}` } });
+      if (!blobRes.ok) throw new Error('Blobデータ（大容量本体）の取得に失敗しました。');
+      
+      const blobData = await blobRes.json();
+      // 改行コードなどを考慮して安全にデコードしてパース
+      const rawText = decodeURIComponent(escape(atob(blobData.content.replace(/\s/g, ''))));
+      return { data: JSON.parse(rawText), sha: metaData.sha };
     }
 
-    async function getFileContent(user, token, path) {
-      const url = `https://api.github.com/repos/${user}/cook.github.io/contents/${path}`;
-      const res = await fetch(url, { headers: { "Authorization": `token ${token}`, "Cache-Control": "no-cache" } });
-      if (!res.ok) throw new Error(`取得失敗: ${path}`);
-      const data = await res.json();
-      return decodeURIComponent(escape(atob(data.content)));
+    // 💡 1MB以上の大容量HTMLファイルに対応したデータ取得関数
+    async function getLargeFileContent(user, token, path) {
+      const metaUrl = `https://api.github.com/repos/${user}/cook.github.io/contents/${path}`;
+      const metaRes = await fetch(metaUrl, { headers: { "Authorization": `token ${token}`, "Cache-Control": "no-cache" } });
+      if (!metaRes.ok) throw new Error(`ファイル取得失敗: ${path}`);
+      const metaData = await metaRes.json();
+      
+      // 通常のレスポンスにcontentが含まれていればそれを使用（1MB未満）、なければBlob APIを使用
+      if (metaData.content) {
+        return decodeURIComponent(escape(atob(metaData.content)));
+      }
+      
+      const blobUrl = `https://api.github.com/repos/${user}/cook.github.io/git/blobs/${metaData.sha}`;
+      const blobRes = await fetch(blobUrl, { headers: { "Authorization": `token ${token}` } });
+      if (!blobRes.ok) throw new Error(`大容量ファイルの本体取得に失敗: ${path}`);
+      
+      const blobData = await blobRes.json();
+      return decodeURIComponent(escape(atob(blobData.content.replace(/\s/g, ''))));
     }
 
     async function getFileMeta(user, token, path) {
@@ -284,11 +286,8 @@
         body: JSON.stringify(body)
       });
 
-      if (!res.ok) {
-        throw new Error(`画像アップロード失敗 [${imageName}]: ステータス ${res.status}`);
-      }
-      log(`✓ アップロード完了: ${imageName} [対象: ${originFile}]`, 'success');
-      return imageName;
+      if (!res.ok) throw new Error(`画像アップロード失敗 [${imageName}]: ステータス ${res.status}`);
+      log(`✓ アップロード成功: ${imageName} [対象: ${originFile}]`, 'success');
     }
 
     async function updateFileOnGitHub(user, token, path, content, message, sha) {
@@ -304,7 +303,7 @@
         body: JSON.stringify(body)
       });
 
-      if (!res.ok) throw new Error(`${path} のGitHub保存に失敗しました。`);
+      if (!res.ok) throw new Error(`${path} のGitHub保存に失敗しました。ステータス: ${res.status}`);
     }
   </script>
 </body>
