@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>ジャーマン風ポテトサラダ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top, #222 0, #050505 55%, #000 100%);
+  color: #f5f5f5;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+.card {
+  max-width: 900px;
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid #333;
+  background: radial-gradient(circle at top left, #2a1515 0, #050505 55%, #000 100%);
+  padding: 0.9rem;
+  box-sizing: border-box;
+  position: relative;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  border-bottom: 1px dashed rgba(255,255,255,0.08);
+  padding-bottom: 0.4rem;
+  padding-right: 4rem;
+}
+.card-title { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.06em; }
+.card-subtitle { font-size: 0.75rem; color: #aaaaaa; }
+.card-tag { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15); color: #ff7043; }
+
+.edit-btn {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  border: 1px solid #333;
+  background: #151515;
+  color: #f5f5f5;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.edit-btn:hover {
+  background: #222;
+  border-color: #ff7043;
+}
+
+.card-body { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }
+.card-top-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr); gap: 0.75rem; }
+
+.card-image { width: 100%; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.12); object-fit: cover; background: #111; aspect-ratio: 4 / 3; }
+.section-title { font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: #aaaaaa; margin-bottom: 0.25rem; }
+.ingredients, .steps { font-size: 0.8rem; line-height: 1.5; }
+.ingredients ul, .steps ol { margin: 0.2rem 0 0; padding-left: 1.1rem; }
+.ingredients li, .steps li { margin-bottom: 0.15rem; }
+.card-footer { display: flex; justify-content: flex-end; margin-top: 0.2rem; }
+.card-note { font-size: 0.7rem; color: #aaaaaa; }
+
+@media (max-width: 720px) {
+  .card-top-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <button class="edit-btn" id="editBtn">編集</button>
+  <div class="card-header">
+    <div>
+      <div class="card-title">ジャーマン風ポテトサラダ</div>
+      <div class="card-subtitle">サラダ,じゃがいも</div>
+    </div>
+    <div class="card-tag">副菜</div>
+  </div>
+  <div class="card-body">
+    <div class="card-top-row">
+      <div>
+        <img id="cardImage" class="card-image" src="" alt="レシピ画像" />
+      </div>
+      <div>
+        <div class="section-title">材料</div>
+        <div class="ingredients"><ul><li>[材料]</li><li>• じゃが：300g</li><li>・にんじん:1,2本</li><li>• 厚切りベーコン：80g</li><li>• 無塩バター：5g（約小さじ1強）　あれば</li><li>• 油（揚げ焼き用）：4〜10g（小さじ1〜2.5）</li><li>• 味の素：0.2g（ひとつまみの半分）　あれば</li><li>• かつお節：2g〜1個袋パック（ひとつまみ）</li><li>[マヨベース]</li><li>• マヨネーズ：50g（約大さじ4）</li><li>• 酢：4g（約小さじ1弱）</li><li>• 粒マスタード：10g（約小さじ2）</li><li>[粒マス代用]</li><li>• はちみつ：小さじ1/4</li><li>• 黒胡椒：多め</li><li>• レモン汁：1〜2滴</li><li>・酢：小さじ1/3  純米黒酢がおすすめ甘酸っぱくてうまい</li><li>• 塩：2.5g（約小さじ1/2弱）</li><li>• 黒胡椒：親の仇のように多めに</li><li>• みりん：2g（約小さじ1/3 ※レンジで10秒加熱して煮切る）</li></ul></div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title" style="margin-top:0.5rem;">作り方</div>
+      <div class="steps"><ol><li>ベーコンは好きな大きさにざっと細切れしておく</li><li>粒マス代用とみりん小1/3は、小さい鍋で煮切りしておく。</li><li>鰹節1パックは乾いたフライパンに入れ中火で2,3minゆすり炙っておく(以下のレンチンで空いたタイミングでok)</li><li>じゃがは芽をとってブロック状に切る</li><li>じゃがはボウルなどに入れ水を浸しアク抜き</li><li>にんじんは頭だけ切り落とす</li><li>キッチンペーパー1切れを濡らして軽く絞りにんじん1本に巻く(本数分同様)</li><li>耐熱皿においてラップふわっとして600W 10min</li><li>スプーンやマッシャーでしっとり潰せるならok</li><li>固形感ある場合は追加レンチン</li><li>取り出したら、アク抜きしたじゃがをレンチン600Wで5minずつ見て、にんじん同様しっとり潰せればok</li><li>じゃがいもはザルにあげて少し冷まし、キッチンペーパーで表面をパンパンして水分を取る</li><li>フライパンに油を入れて、火が回ったらじゃがいも投入</li><li>なるべく薄く広げたら、動かさず焦げ目ついてきたら裏返す</li><li>両面キツネ色になったら、ニンジン潰していたボウルに入れ混ぜ合わせる</li><li>そのフライパンでそのままベーコンを炒める</li><li>カリカリがいいぞ</li><li>ベーコンをボールに投入</li><li>最後にマヨベースをボウルに投入し良く混ぜ合わせる</li><li>味が足らない場合マヨ小1、塩少々ずつ追加していく</li></ol></div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <span class="card-note">ゴリのレシピ</span>
+  </div>
+</div>
+
+<script>
+document.getElementById("editBtn").addEventListener("click", () => {
+  const target = {
+    genre: "副菜",
+    title: "ジャーマン風ポテトサラダ",
+    subtitle: "サラダ,じゃがいも",
+    ingredients: ["[材料]","• じゃが：300g","・にんじん:1,2本","• 厚切りベーコン：80g","• 無塩バター：5g（約小さじ1強）　あれば","• 油（揚げ焼き用）：4〜10g（小さじ1〜2.5）","• 味の素：0.2g（ひとつまみの半分）　あれば","• かつお節：2g〜1個袋パック（ひとつまみ）","[マヨベース]","• マヨネーズ：50g（約大さじ4）","• 酢：4g（約小さじ1弱）","• 粒マスタード：10g（約小さじ2）","[粒マス代用]","• はちみつ：小さじ1/4","• 黒胡椒：多め","• レモン汁：1〜2滴","・酢：小さじ1/3  純米黒酢がおすすめ甘酸っぱくてうまい","• 塩：2.5g（約小さじ1/2弱）","• 黒胡椒：親の仇のように多めに","• みりん：2g（約小さじ1/3 ※レンジで10秒加熱して煮切る）"],
+    steps: ["ベーコンは好きな大きさにざっと細切れしておく","粒マス代用とみりん小1/3は、小さい鍋で煮切りしておく。","鰹節1パックは乾いたフライパンに入れ中火で2,3minゆすり炙っておく(以下のレンチンで空いたタイミングでok)","じゃがは芽をとってブロック状に切る","じゃがはボウルなどに入れ水を浸しアク抜き","にんじんは頭だけ切り落とす","キッチンペーパー1切れを濡らして軽く絞りにんじん1本に巻く(本数分同様)","耐熱皿においてラップふわっとして600W 10min","スプーンやマッシャーでしっとり潰せるならok","固形感ある場合は追加レンチン","取り出したら、アク抜きしたじゃがをレンチン600Wで5minずつ見て、にんじん同様しっとり潰せればok","じゃがいもはザルにあげて少し冷まし、キッチンペーパーで表面をパンパンして水分を取る","フライパンに油を入れて、火が回ったらじゃがいも投入","なるべく薄く広げたら、動かさず焦げ目ついてきたら裏返す","両面キツネ色になったら、ニンジン潰していたボウルに入れ混ぜ合わせる","そのフライパンでそのままベーコンを炒める","カリカリがいいぞ","ベーコンをボールに投入","最後にマヨベースをボウルに投入し良く混ぜ合わせる","味が足らない場合マヨ小1、塩少々ずつ追加していく"],
+    image: ""
+  };
+  sessionStorage.setItem("edit_recipe_target", JSON.stringify(target));
+  window.location.href = "../index.html?mode=edit";
+});
+</script>
+</body>
+</html>
