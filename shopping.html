@@ -195,7 +195,7 @@
   <header>
     <div class="header-title">買い物リスト</div>
     <div style="display: flex; gap: 0.5rem;">
-      <button id="btn-save" class="icon-btn btn-sync" onclick="executeSave()">💾 保存</button>
+      <button id="btn-save" class="icon-btn btn-sync" onclick="executeSave(false)">💾 保存</button>
       <a href="index.html" class="icon-btn">🍳 <span>ゴリのレシピ</span></a>
     </div>
   </header>
@@ -225,10 +225,8 @@
   <datalist id="genreSuggestions"></datalist>
 
   <script>
-    // 🔗 GASのWebアプリURL
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwPoY-Gev1Hwq6ljC0m1Y_PFLPSWL6ZrTo5zt0XJc42syyyuMa8qQFQumoquIsP70XG/exec";
 
-    // 📦 アプリデータ
     let appData = {
       items: []
     };
@@ -237,13 +235,10 @@
     const genreSuggestions = document.getElementById('genreSuggestions');
     const clearCheckedBtn = document.getElementById('clearCheckedBtn');
 
-    // 起動時の初期処理
     document.addEventListener('DOMContentLoaded', () => {
       loadFromSpreadsheet();
     });
 
-    /*** 📥 スプレッドシートからデータを読み込む (GET)
-    */
     async function loadFromSpreadsheet() {
       const statusLabel = document.getElementById('sync-status');
       statusLabel.innerText = "🔄 スプレッドシートからデータを同期中...";
@@ -266,19 +261,19 @@
       }
     }
 
-    /*** 💾 保存処理（共通呼び出し用の中継関数）
-    */
+    // 変更：確実に現在の入力欄の最新状態を反映してから保存を行うように修正
     async function executeSave(isAutoSave = false) {
       const saveBtn = document.getElementById('btn-save');
       
-      // 手動保存のときだけボタンを「保存中」表示にして連打防止する
       if (!isAutoSave) {
         saveBtn.disabled = true;
         saveBtn.innerText = "⏳ 保存中...";
       }
 
+      // 画面の「今入力されている値」を確実にappDataに集約
+      collectFormData(); 
+
       try {
-        collectFormData(); // 画面の最新状態をappDataに集約
         await saveToSpreadsheet();
       } catch (e) {
         console.error(e);
@@ -291,29 +286,30 @@
       }
     }
 
-    /*** 📝 画面の入力値をappDataに集約する
-    */
     function collectFormData() {
       const rows = listBody.querySelectorAll('tr');
       const updatedItems = [];
 
       rows.forEach(row => {
         const index = parseInt(row.dataset.index);
-        if (index === -1) return; // 新規入力用の空行はスキップ
-
+        
+        // 各行の入力項目を取得
         const chk = row.querySelector('.custom-checkbox');
         const inputGenre = row.querySelector('.input-genre');
         const inputName = row.querySelector('.input-name');
         const inputMemo = row.querySelector('.input-memo');
 
+        if (!inputName) return;
+
         const nameValue = inputName.value.trim();
-        // 名称が空のものは除外（自動削除扱い）
+        
+        // 名称が空でないものを有効なデータとして収集（新規・既存問わず）
         if (nameValue !== '') {
           updatedItems.push({
-            checked: chk.checked,
-            genre: inputGenre.value.trim(),
+            checked: chk ? chk.checked : false,
+            genre: inputGenre ? inputGenre.value.trim() : '',
             name: nameValue,
-            memo: inputMemo.value.trim()
+            memo: inputMemo ? inputMemo.value.trim() : ''
           });
         }
       });
@@ -329,18 +325,16 @@
       appData.items = updatedItems;
     }
 
-    /*** 💻 データを画面に描写する
-    */
     function renderApp() {
-      // 現在フォーカスが当たっている要素の情報を一時退避
+      // 現在フォーカスが当たっている要素の「ジャンル/名称/備考」の区別と「値」を記憶
       const activeEl = document.activeElement;
       let savedFocusInfo = null;
       if (activeEl && activeEl.classList.contains('cell-input')) {
         const row = activeEl.closest('tr');
         if (row) {
           savedFocusInfo = {
-            index: row.dataset.index,
-            className: activeEl.classList[1] // input-genre, input-name, input-memo のいずれか
+            className: activeEl.classList[1], // input-genre, input-name, input-memo
+            value: activeEl.value // 入力中の値を記憶
           };
         }
       }
@@ -360,23 +354,22 @@
       // 3. ジャンルサジェストの更新
       updateGenreSuggestions();
 
-      // 4. 自動ソート等で再描画された後、元の入力欄にフォーカスを復元する
+      // 4. フォーカスの確実な復元（値が一致する入力欄を探して戻す）
       if (savedFocusInfo) {
-        const targetRow = listBody.querySelector(`tr[data-index="${savedFocusInfo.index}"]`);
-        if (targetRow) {
-          const targetInput = targetRow.querySelector(`.${savedFocusInfo.className}`);
-          if (targetInput) {
-            targetInput.focus();
-            // カーソルを文字の一番後ろに移動させる
-            const val = targetInput.value;
-            targetInput.value = '';
-            targetInput.value = val;
+        const inputs = listBody.querySelectorAll(`.${savedFocusInfo.className}`);
+        for (let input of inputs) {
+          if (input.value === savedFocusInfo.value) {
+            input.focus();
+            // カーソルを末尾へ移動
+            const val = input.value;
+            input.value = '';
+            input.value = val;
+            break;
           }
         }
       }
     }
 
-    // 行のHTMLを動的に生成する
     function createRowHTML(item, index) {
       const tr = document.createElement('tr');
       tr.dataset.index = index;
@@ -410,30 +403,25 @@
       const inputMemo = tr.querySelector('.input-memo');
       const delBtn = tr.querySelector('.delete-btn');
 
-      // チェックボックス変更時は、引数に true を渡して自動保存（非同期）を走らせる
       if (chk) {
         chk.addEventListener('change', () => {
           executeSave(true);
         });
       }
 
-      // 入力欄からフォーカスが外れた（あるいは別行へ移った）瞬間に自動保存
+      // 修正：changeイベントもフックすることで、フォーカスが外れる際のデータ取得漏れを防ぐ
       const handleInputChange = () => {
-        const nValue = inputName.value.trim();
-        if (isNew) {
-          if (nValue !== '') {
-            executeSave(true);
-          }
-        } else {
-          executeSave(true);
-        }
+        executeSave(true);
       };
 
+      inputGenre.addEventListener('change', handleInputChange);
+      inputName.addEventListener('change', handleInputChange);
+      inputMemo.addEventListener('change', handleInputChange);
+      
       inputGenre.addEventListener('blur', handleInputChange);
       inputName.addEventListener('blur', handleInputChange);
       inputMemo.addEventListener('blur', handleInputChange);
 
-      // Enterキーで入力を確定した時も即座に自動保存が走るようにする
       [inputGenre, inputName, inputMemo].forEach(input => {
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
@@ -442,10 +430,9 @@
         });
       });
 
-      // 削除（×）ボタン
       if (delBtn) {
         delBtn.addEventListener('click', () => {
-          inputName.value = ''; // 名称を空にして自動保存に回すことで削除扱いにする
+          inputName.value = ''; 
           executeSave(true);
         });
       }
@@ -453,26 +440,21 @@
       listBody.appendChild(tr);
     }
 
-    // ジャンルのプルダウン候補を更新
     function updateGenreSuggestions() {
       if (!appData.items || !Array.isArray(appData.items)) return;
       const genres = [...new Set(appData.items.map(item => item.genre).filter(g => g && g.trim() !== ''))];
       genreSuggestions.innerHTML = genres.map(g => `<option value="${g}"></option>`).join('');
     }
 
-    // チェック済を一括削除するボタン
     clearCheckedBtn.addEventListener('click', () => {
       if(confirm('チェックのついたアイテムを削除しますか？')) {
         if (appData.items && Array.isArray(appData.items)) {
           appData.items = appData.items.filter(item => !item.checked);
-          // 削除後は手動保存と同様に上部バーで進捗が分かりやすいよう通常のsaveを走らせる
           executeSave(false);
         }
       }
     });
 
-    /*** 📤 スプレッドシートへデータを書き込む (POST)
-    */
     async function saveToSpreadsheet() {
       const statusLabel = document.getElementById('sync-status');
       statusLabel.innerText = "💾 クラウドに保存中...";
@@ -483,7 +465,7 @@
         });
         if (res.ok) {
           statusLabel.innerText = "✅ 自動保存しました！";
-          renderApp(); // 自動ソートされた最新状態で画面を更新
+          renderApp(); 
         } else {
           statusLabel.innerText = "❌ クラウド保存エラー(ステータス不正)";
         }
