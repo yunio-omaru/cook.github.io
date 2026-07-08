@@ -100,14 +100,22 @@
       margin-bottom: 1rem;
     }
 
+    /* 📱 スマホで横スライドを可能にする魔法のラッパー枠 */
+    .table-container {
+      width: 100%;
+      overflow-x: auto; /* 横方向に溢れたらスクロールさせる */
+      -webkit-overflow-scrolling: touch; /* ズレのない滑らかなスワイプ感にする */
+      background: rgba(10, 10, 10, 0.9);
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
     /* Table Style */
     .shopping-table {
       width: 100%;
+      min-width: 850px; /* 👈 ココが重要！スマホでも潰れない最小幅をしっかり確保 */
       border-collapse: collapse;
-      background: rgba(10, 10, 10, 0.9);
-      border-radius: 0.5rem;
-      overflow: hidden;
-      border: 1px solid var(--border);
     }
     .shopping-table th, 
     .shopping-table td {
@@ -124,14 +132,14 @@
       letter-spacing: 0.05em;
     }
     
-    /* Column widths */
-    .col-check { width: 40px; text-align: center; }
-    .col-genre { width: 10%; }
-    .col-name { width: 18%; }
-    .col-season { width: 10%; } 
-    .col-points { width: 22%; }
-    .col-history { width: 22%; }
-    .col-memo { width: auto; }
+    /* 各列の幅比率を最適化 */
+    .col-check { width: 45px; text-align: center; }
+    .col-genre { width: 110px; }
+    .col-name { width: 170px; }
+    .col-season { width: 110px; } 
+    .col-points { width: 220px; }
+    .col-history { width: 180px; }
+    .col-memo { width: auto; min-width: 120px; }
     .col-action { width: 50px; text-align: center; }
 
     /* Inputs */
@@ -225,10 +233,10 @@
 
     @media (max-width: 768px) {
       .shopping-table th, .shopping-table td {
-        padding: 0.4rem;
+        padding: 0.5rem 0.4rem;
       }
       .cell-input {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
       }
     }
   </style>
@@ -257,22 +265,24 @@
       <button class="icon-btn" id="clearCheckedBtn" style="font-size: 0.75rem; color: var(--muted);">チェック済を削除</button>
     </div>
 
-    <table class="shopping-table">
-      <thead>
-        <tr>
-          <th class="col-check">☑</th>
-          <th class="col-genre">ジャンル</th>
-          <th class="col-name">名称</th>
-          <th class="col-season">旬</th> 
-          <th class="col-points">選ぶポイント</th>
-          <th class="col-history">購入日と金額</th>
-          <th class="col-memo">備考</th>
-          <th class="col-action"></th>
-        </tr>
-      </thead>
-      <tbody id="listBody">
-        </tbody>
-    </table>
+    <div class="table-container">
+      <table class="shopping-table">
+        <thead>
+          <tr>
+            <th class="col-check">☑</th>
+            <th class="col-genre">ジャンル</th>
+            <th class="col-name">名称</th>
+            <th class="col-season">旬</th> 
+            <th class="col-points">選ぶポイント</th>
+            <th class="col-history">購入日と金額</th>
+            <th class="col-memo">備考</th>
+            <th class="col-action"></th>
+          </tr>
+        </thead>
+        <tbody id="listBody">
+          </tbody>
+      </table>
+    </div>
   </main>
 
   <datalist id="genreSuggestions"></datalist>
@@ -438,8 +448,7 @@
       }
     }
 
-    // 🛠️ 改良版：画面の入力内容をかき集めてappDataに格納する関数
-    // アコーディオンで隠れている行の消失を防ぐため、画面に存在するinputの値だけをピンポイントでデータに同期します
+    // 画面の入力内容をかき集めてappDataに格納する関数
     function collectFormData() {
       const rows = listBody.querySelectorAll('tr');
       const updatedItems = [];
@@ -456,7 +465,6 @@
         const nameValue = inputName.value.trim();
         if (nameValue === '') return;
 
-        // 元データから現在の多段配列をベースとして取得（画面にない非表示データの保持用）
         let pointsArray = [];
         let historyArray = [];
         if (idx !== -1 && appData.items[idx]) {
@@ -464,18 +472,17 @@
           historyArray = Array.isArray(appData.items[idx].history) ? [...appData.items[idx].history] : (appData.items[idx].history ? [appData.items[idx].history] : []);
         }
 
-        // 🌟 画面上に描画されている入力欄がある場合のみ、該当する位置のデータを書き換える
         const pointsInputs = row.querySelectorAll('.input-point');
         pointsInputs.forEach((input, i) => {
           pointsArray[i] = input.value.trim();
         });
-        pointsArray = pointsArray.filter(v => v !== undefined && v !== ''); // 空文字は除外
+        pointsArray = pointsArray.filter(v => v !== undefined && v !== ''); 
 
         const historyInputs = row.querySelectorAll('.input-history');
         historyInputs.forEach((input, i) => {
           historyArray[i] = input.value.trim();
         });
-        historyArray = historyArray.filter(v => v !== undefined && v !== ''); // 空文字は除外
+        historyArray = historyArray.filter(v => v !== undefined && v !== ''); 
 
         updatedItems.push({
           checked: chk ? chk.checked : false,
@@ -488,7 +495,6 @@
         });
       });
 
-      // ジャンル順にソート
       updatedItems.sort((a, b) => {
         if (!a.genre && b.genre) return 1;
         if (a.genre && !b.genre) return -1;
@@ -525,14 +531,12 @@
         });
       }
 
-      // 一番下の新規追加用空行
       createRowHTML({ checked: false, genre: '', name: '', season: '', points: [], history: [], memo: '' }, -1);
       
       if (typeof updateGenreSuggestions === 'function') {
         updateGenreSuggestions();
       }
 
-      // フォーカスの復元
       if (savedFocusInfo) {
         const targetRow = listBody.querySelector(`tr[data-index="${savedFocusInfo.rowIndex}"]`);
         if (targetRow) {
@@ -616,7 +620,7 @@
           <input type="text" class="cell-input input-name" value="${item.name || ''}" placeholder="＋ 追加...">
         </td>
         <td class="col-season">
-          <input type="text" class="cell-input input-season" value="${item.season || ''}" placeholder="例: 夏、10〜12月">
+          <input type="text" class="cell-input input-season" value="${item.season || ''}" placeholder="例: 夏">
         </td>
         <td class="col-points">
           ${pointsHTML}
@@ -644,7 +648,6 @@
         chk.addEventListener('change', () => { executeSave(true); });
       }
 
-      // 🛠️ リアルタイムな文字入力をデータに即時連動させる処理を追加
       const syncInputToData = (input, key, subidx) => {
         if (isNew) return; 
         if (!appData.items[index]) return;
@@ -662,7 +665,6 @@
       inputSeason.addEventListener('blur', handleInputChange); 
       inputMemo.addEventListener('blur', handleInputChange);
 
-      // 多段入力セルのイベント処理
       tr.querySelectorAll('.input-point').forEach(input => {
         const subidx = parseInt(input.dataset.subindex, 10);
         input.addEventListener('input', () => syncInputToData(input, 'points', subidx));
@@ -687,7 +689,6 @@
         });
       });
 
-      // 項目追加（＋）ボタンの動作
       tr.querySelectorAll('.inner-add-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const type = btn.dataset.type;
@@ -702,12 +703,10 @@
         });
       });
 
-      // 展開 / 折りたたみボタンの動作
       tr.querySelectorAll('.toggle-expand-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const type = btn.dataset.type;
           const key = `${index}-${type}`;
-          // 閉じる前に現在の画面の入力内容を確実に回収
           collectFormData();
           expandedStates[key] = !expandedStates[key]; 
           renderApp();
