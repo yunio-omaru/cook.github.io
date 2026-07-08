@@ -87,7 +87,7 @@
     /* Layout */
     main {
       padding: 1rem;
-      max-width: 1100px; /* 列が増えたため少し幅を広げました */
+      max-width: 1100px; 
       width: 100%;
       margin: 0 auto;
       flex: 1;
@@ -128,7 +128,7 @@
     .col-check { width: 40px; text-align: center; }
     .col-genre { width: 10%; }
     .col-name { width: 18%; }
-    .col-season { width: 10%; } /* 🌟 旬の列を追加 */
+    .col-season { width: 10%; } 
     .col-points { width: 22%; }
     .col-history { width: 22%; }
     .col-memo { width: auto; }
@@ -263,7 +263,8 @@
           <th class="col-check">☑</th>
           <th class="col-genre">ジャンル</th>
           <th class="col-name">名称</th>
-          <th class="col-season">旬</th> <th class="col-points">選ぶポイント</th>
+          <th class="col-season">旬</th> 
+          <th class="col-points">選ぶポイント</th>
           <th class="col-history">購入日と金額</th>
           <th class="col-memo">備考</th>
           <th class="col-action"></th>
@@ -437,33 +438,50 @@
       }
     }
 
-    // 画面の入力内容をかき集めてappDataに格納する関数
+    // 🛠️ 改良版：画面の入力内容をかき集めてappDataに格納する関数
+    // アコーディオンで隠れている行の消失を防ぐため、画面に存在するinputの値だけをピンポイントでデータに同期します
     function collectFormData() {
       const rows = listBody.querySelectorAll('tr');
       const updatedItems = [];
 
       rows.forEach(row => {
+        const idx = parseInt(row.dataset.index, 10);
         const chk = row.querySelector('.custom-checkbox');
         const inputGenre = row.querySelector('.input-genre');
         const inputName = row.querySelector('.input-name');
-        const inputSeason = row.querySelector('.input-season'); // 🌟 旬の回収
+        const inputSeason = row.querySelector('.input-season'); 
         const inputMemo = row.querySelector('.input-memo');
 
         if (!inputName) return;
         const nameValue = inputName.value.trim();
         if (nameValue === '') return;
 
+        // 元データから現在の多段配列をベースとして取得（画面にない非表示データの保持用）
+        let pointsArray = [];
+        let historyArray = [];
+        if (idx !== -1 && appData.items[idx]) {
+          pointsArray = Array.isArray(appData.items[idx].points) ? [...appData.items[idx].points] : (appData.items[idx].points ? [appData.items[idx].points] : []);
+          historyArray = Array.isArray(appData.items[idx].history) ? [...appData.items[idx].history] : (appData.items[idx].history ? [appData.items[idx].history] : []);
+        }
+
+        // 🌟 画面上に描画されている入力欄がある場合のみ、該当する位置のデータを書き換える
         const pointsInputs = row.querySelectorAll('.input-point');
-        const pointsArray = Array.from(pointsInputs).map(i => i.value.trim()).filter(v => v !== '');
+        pointsInputs.forEach((input, i) => {
+          pointsArray[i] = input.value.trim();
+        });
+        pointsArray = pointsArray.filter(v => v !== undefined && v !== ''); // 空文字は除外
 
         const historyInputs = row.querySelectorAll('.input-history');
-        const historyArray = Array.from(historyInputs).map(i => i.value.trim()).filter(v => v !== '');
+        historyInputs.forEach((input, i) => {
+          historyArray[i] = input.value.trim();
+        });
+        historyArray = historyArray.filter(v => v !== undefined && v !== ''); // 空文字は除外
 
         updatedItems.push({
           checked: chk ? chk.checked : false,
           genre: inputGenre ? inputGenre.value.trim() : '',
           name: nameValue,
-          season: inputSeason ? inputSeason.value.trim() : '', // 🌟 保存データに旬を追加
+          season: inputSeason ? inputSeason.value.trim() : '', 
           points: pointsArray, 
           history: historyArray, 
           memo: inputMemo ? inputMemo.value.trim() : ''
@@ -553,7 +571,7 @@
         if (!isPointsExpanded && i > 0) break;
         pointsHTML += `
           <div class="multi-input-row">
-            <input type="text" class="cell-input input-point" value="${val}" placeholder="・ポイント">
+            <input type="text" class="cell-input input-point" data-subindex="${i}" value="${val}" placeholder="・ポイント">
           </div>`;
       }
       if (!isNew && pointsList.length > 0) {
@@ -573,7 +591,7 @@
         if (!isHistoryExpanded && i > 0) break;
         historyHTML += `
           <div class="multi-input-row">
-            <input type="text" class="cell-input input-history" value="${val}" placeholder="例: 7/8 150円">
+            <input type="text" class="cell-input input-history" data-subindex="${i}" value="${val}" placeholder="例: 7/8 150円">
           </div>`;
       }
       if (!isNew && historyList.length > 0) {
@@ -618,7 +636,7 @@
       const chk = tr.querySelector('.custom-checkbox');
       const inputGenre = tr.querySelector('.input-genre');
       const inputName = tr.querySelector('.input-name');
-      const inputSeason = tr.querySelector('.input-season'); // 🌟 旬のイベント用
+      const inputSeason = tr.querySelector('.input-season'); 
       const inputMemo = tr.querySelector('.input-memo');
       const delBtn = tr.querySelector('.delete-btn');
 
@@ -626,16 +644,37 @@
         chk.addEventListener('change', () => { executeSave(true); });
       }
 
+      // 🛠️ リアルタイムな文字入力をデータに即時連動させる処理を追加
+      const syncInputToData = (input, key, subidx) => {
+        if (isNew) return; 
+        if (!appData.items[index]) return;
+        if (subidx !== undefined) {
+          appData.items[index][key][subidx] = input.value.trim();
+        } else {
+          appData.items[index][key] = input.value.trim();
+        }
+      };
+
       const handleInputChange = () => { executeSave(true); };
       
-      // 基本項目のフォーカスアウトイベント
       inputGenre.addEventListener('blur', handleInputChange);
       inputName.addEventListener('blur', handleInputChange);
-      inputSeason.addEventListener('blur', handleInputChange); // 🌟 旬のフォーカスアウト
+      inputSeason.addEventListener('blur', handleInputChange); 
       inputMemo.addEventListener('blur', handleInputChange);
 
-      // 追加された多段入力欄のフォーカスアウトイベント割り当て
-      tr.querySelectorAll('.input-point, .input-history').forEach(input => {
+      // 多段入力セルのイベント処理
+      tr.querySelectorAll('.input-point').forEach(input => {
+        const subidx = parseInt(input.dataset.subindex, 10);
+        input.addEventListener('input', () => syncInputToData(input, 'points', subidx));
+        input.addEventListener('blur', handleInputChange);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.isComposing) { input.blur(); }
+        });
+      });
+
+      tr.querySelectorAll('.input-history').forEach(input => {
+        const subidx = parseInt(input.dataset.subindex, 10);
+        input.addEventListener('input', () => syncInputToData(input, 'history', subidx));
         input.addEventListener('blur', handleInputChange);
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' && !e.isComposing) { input.blur(); }
@@ -668,6 +707,8 @@
         btn.addEventListener('click', () => {
           const type = btn.dataset.type;
           const key = `${index}-${type}`;
+          // 閉じる前に現在の画面の入力内容を確実に回収
+          collectFormData();
           expandedStates[key] = !expandedStates[key]; 
           renderApp();
         });
@@ -714,19 +755,23 @@
 
         const genreInput = row.querySelector('.input-genre');
         const nameInput = row.querySelector('.input-name');
-        const seasonInput = row.querySelector('.input-season'); // 🌟 旬の検索用
+        const seasonInput = row.querySelector('.input-season'); 
         const memoInput = row.querySelector('.input-memo');
         
-        const pointsInputs = Array.from(row.querySelectorAll('.input-point')).map(i => i.value).join(' ');
-        const historyInputs = Array.from(row.querySelectorAll('.input-history')).map(i => i.value).join(' ');
+        const idx = parseInt(row.dataset.index, 10);
+        let pointsStr = "";
+        let historyStr = "";
+        if (appData.items[idx]) {
+          if (Array.isArray(appData.items[idx].points)) pointsStr = appData.items[idx].points.join(' ');
+          if (Array.isArray(appData.items[idx].history)) historyStr = appData.items[idx].history.join(' ');
+        }
 
         const genreText = genreInput ? genreInput.value.toLowerCase().normalize("NFKC") : '';
         const nameText = nameInput ? nameInput.value.toLowerCase().normalize("NFKC") : '';
-        const seasonText = seasonInput ? seasonInput.value.toLowerCase().normalize("NFKC") : ''; // 🌟 旬をテキスト結合
+        const seasonText = seasonInput ? seasonInput.value.toLowerCase().normalize("NFKC") : ''; 
         const memoText = memoInput ? memoInput.value.toLowerCase().normalize("NFKC") : '';
         
-        // 🌟 検索対象テキストの結合（旬も検索可能に）
-        const combinedText = `${genreText} ${nameText} ${seasonText} ${memoText} ${pointsInputs.toLowerCase().normalize("NFKC")} ${historyInputs.toLowerCase().normalize("NFKC")}`;
+        const combinedText = `${genreText} ${nameText} ${seasonText} ${memoText} ${pointsStr.toLowerCase().normalize("NFKC")} ${historyStr.toLowerCase().normalize("NFKC")}`;
 
         const matchesKeyword = !rawKeyword || 
           combinedText.includes(keywordHira) || 
