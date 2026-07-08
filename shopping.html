@@ -225,11 +225,19 @@
   <datalist id="genreSuggestions"></datalist>
 
   <script>
+    // 🔗 GASのWebアプリURL（随時自動保存用）
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwPoY-Gev1Hwq6ljC0m1Y_PFLPSWL6ZrTo5zt0XJc42syyyuMa8qQFQumoquIsP70XG/exec";
+
+    // 🛠️ GitHub設定
+    const GITHUB_REPO = "yunio-omaru/cook.github.io"; 
+    const FILE_PATH = "shopping.json"; 
 
     let appData = {
       items: []
     };
+
+    // 🔒 通信中の連続操作バグを防ぐためのフラグ
+    let isSavingNow = false; 
 
     const listBody = document.getElementById('listBody');
     const genreSuggestions = document.getElementById('genreSuggestions');
@@ -239,6 +247,7 @@
       loadFromSpreadsheet();
     });
 
+    // スプレッドシートからの読み込み (GET)
     async function loadFromSpreadsheet() {
       const statusLabel = document.getElementById('sync-status');
       statusLabel.innerText = "🔄 スプレッドシートからデータを同期中...";
@@ -261,26 +270,114 @@
       }
     }
 
+    // 保存処理（手動・自動の中継）
     async function executeSave(isAutoSave = false) {
-      const saveBtn = document.getElementById('btn-save');
-      
-      if (!isAutoSave) {
-        saveBtn.disabled = true;
-        saveBtn.innerText = "⏳ 保存中...";
+      // すでに保存通信が走っている場合は重複処理をしない（最重要の安全対策）
+      if (isSavingNow) return; 
+
+      if (isAutoSave) {
+        isSavingNow = true;
+        setInputsDisabled(true); // 🛠️ 入力欄を一時ロックして変換崩れを徹底防御
+        collectFormData();
+        await saveToSpreadsheet();
+        return;
       }
+
+      const saveBtn = document.getElementById('btn-save');
+      const token = prompt("GitHubの shopping.json に保存するため、ghpトークンコードを入力してください：");
+      if (!token) return; 
+
+      isSavingNow = true;
+      setInputsDisabled(true); // ロック
+      saveBtn.disabled = true;
+      saveBtn.innerText = "⏳ GitHubに保存中...";
 
       collectFormData(); 
 
       try {
-        await saveToSpreadsheet();
+        await saveToGitHub(token.trim());
       } catch (e) {
         console.error(e);
-        if (!isAutoSave) alert("保存処理でエラーが発生しました");
+        alert("GitHubへの保存処理でエラーが発生しました。");
       } finally {
-        if (!isAutoSave) {
-          saveBtn.disabled = false;
-          saveBtn.innerText = "💾 保存";
+        isSavingNow = false;
+        setInputsDisabled(false); // ロック解除
+        saveBtn.disabled = false;
+        saveBtn.innerText = "💾 保存";
+      }
+    }
+
+    // 🛠️ クラウド保存中に入力欄やボタンを一時的に触れなくする防御関数
+    function setInputsDisabled(disabled) {
+      const inputs = listBody.querySelectorAll('.cell-input, .custom-checkbox, .delete-btn');
+      inputs.forEach(input => {
+        input.disabled = disabled;
+      });
+      clearCheckedBtn.disabled = disabled;
+    }
+
+    // GitHub APIを使ってファイルを直接上書きコミットする関数
+    async function saveToGitHub(token) {
+      const statusLabel = document.getElementById('sync-status');
+      statusLabel.innerText = "💾 GitHubに保存中...";
+
+      const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${FILE_PATH}`;
+      
+      let sha = "";
+      try {
+        const getRes = await fetch(apiUrl, {
+          headers: { "Authorization": `token ${token}` }
+        });
+        if (getRes.ok) {
+          const getData = await getRes.json();
+          sha = getData.sha; 
         }
+      } catch(e) {
+        console.log("既存ファイルなし");
+      }
+
+      const jsonContent = JSON.stringify(appData, null, 2);
+      const base64Content = btoa(unescape(encodeURIComponent(jsonContent)));
+
+      const putRes = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: "Update shopping.json via app button", 
+          content: base64Content,
+          sha: sha || undefined
+        })
+      });
+
+      if (putRes.ok) {
+        statusLabel.innerText = "✅ GitHubの shopping.json に保存しました！";
+        renderApp();
+      } else {
+        throw new Error("GitHubへのコミットに失敗しました");
+      }
+    }
+
+    // 随時バックグラウンド自動保存用のスプシ送信関数
+    async function saveToSpreadsheet() {
+      const statusLabel = document.getElementById('sync-status');
+      statusLabel.innerText = "🔄 バックグラウンド自動保存中...";
+      try {
+        const res = await fetch(GAS_API_URL, { 
+          method: "POST", 
+          body: JSON.stringify(appData) 
+        });
+        if (res.ok) {
+          statusLabel.innerText = "✅ 自動保存完了 (スプシ)";
+          renderApp(); 
+        }
+      } catch(e) {
+        console.error(e);
+      } finally {
+        isSavingNow = false;
+        setInputsDisabled(false); // スプシ自動保存が終わったらロックを安全に解除
       }
     }
 
@@ -395,20 +492,18 @@
         });
       }
 
-      // 🛠️ 改善：1文字ずつの入力干渉（changeイベント等）を廃止し、完全に「枠から外れた時 (blur)」だけに絞り込む
       const handleInputChange = () => {
         executeSave(true);
       };
       
-      // blur（フォーカスアウト）のみを登録
+      // 🛠️ 改善：すべての入力欄（名称、ジャンル、備考）の検知タイミングを「blur」に統一
       inputGenre.addEventListener('blur', handleInputChange);
       inputName.addEventListener('blur', handleInputChange);
       inputMemo.addEventListener('blur', handleInputChange);
 
-      // Enterキーで入力を確定した時は、フォーカスを明示的に外すことで即時自動保存
       [inputGenre, inputName, inputMemo].forEach(input => {
         input.addEventListener('keydown', (e) => {
-          // IME（日本語漢字変換）の決定エンターキーは除外し、純粋な入力確定時のみ動作させる
+          // 漢字変換確定のEnterでは自動保存を無視。入力終了のEnterでのみ作動
           if (e.key === 'Enter' && !e.isComposing) {
             input.blur(); 
           }
@@ -439,26 +534,6 @@
         }
       }
     });
-
-    async function saveToSpreadsheet() {
-      const statusLabel = document.getElementById('sync-status');
-      statusLabel.innerText = "💾 クラウドに保存中...";
-      try {
-        const res = await fetch(GAS_API_URL, { 
-          method: "POST", 
-          body: JSON.stringify(appData) 
-        });
-        if (res.ok) {
-          statusLabel.innerText = "✅ 自動保存しました！";
-          renderApp(); 
-        } else {
-          statusLabel.innerText = "❌ クラウド保存エラー(ステータス不正)";
-        }
-      } catch(e) {
-        console.error(e);
-        statusLabel.innerText = "❌ クラウド保存エラー ";
-      }
-    }
   </script>
 </body>
 </html>
