@@ -83,6 +83,12 @@
       "genre": "食材　野菜",
       "name": "トマト",
       "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "日用品",
+      "name": "ポリ袋",
+      "memo": ""
     }
   ]
 }
