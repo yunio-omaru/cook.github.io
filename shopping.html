@@ -202,7 +202,14 @@
 
   <main>
     <div id="sync-status" class="sync-status-bar">🔄 接続確認中...</div>
-
+    
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+      <input type="text" id="searchBox" class="cell-input" style="flex: 1; min-width: 150px; background: rgba(20,20,20,0.8); border: 1px solid var(--border);" placeholder="🔍 キーワードで検索（例: 茄子）">
+      <select id="genreFilter" class="cell-input" style="width: auto; min-width: 120px; background: rgba(20,20,20,0.8); border: 1px solid var(--border); color: var(--text);">
+        <option value="">📁 すべてのジャンル</option>
+      </select>
+    </div>
+    
     <div class="list-actions">
       <button class="icon-btn" id="clearCheckedBtn" style="font-size: 0.75rem; color: var(--muted);">チェック済を削除</button>
     </div>
@@ -534,6 +541,80 @@
         }
       }
     });
+    
+    // =================================================================
+    // 🔍 検索・ジャンル絞り込み 追記コード（既存ロジックはいじりません）
+    // =================================================================
+    const searchBox = document.getElementById('searchBox');
+    const genreFilter = document.getElementById('genreFilter');
+
+    // 検索ワード、または選択ジャンルが変わった時に表示を切り替える関数
+    function applyFilter() {
+      const keyword = searchBox.value.toLowerCase().trim();
+      const selectedGenre = genreFilter.value;
+      const rows = listBody.querySelectorAll('tr');
+
+      rows.forEach(row => {
+        // 新規追加行（一番下の空行）は常に表示する
+        if (row.dataset.index === "-1") {
+          row.style.display = '';
+          return;
+        }
+
+        const genreInput = row.querySelector('.input-genre');
+        const nameInput = row.querySelector('.input-name');
+        const memoInput = row.querySelector('.input-memo');
+
+        const genreText = genreInput ? genreInput.value.toLowerCase() : '';
+        const nameText = nameInput ? nameInput.value.toLowerCase() : '';
+        const memoText = memoInput ? memoInput.value.toLowerCase() : '';
+
+        // 1. キーワード検索の判定（ジャンル・名称・備考のどこかに含まれているか）
+        const matchesKeyword = !keyword || 
+          genreText.includes(keyword) || 
+          nameText.includes(keyword) || 
+          memoText.includes(keyword);
+
+        // 2. ジャンルフィルターの判定
+        const matchesGenre = !selectedGenre || genreInput.value === selectedGenre;
+
+        // 両方の条件を満たす場合のみ表示、それ以外は非表示
+        if (matchesKeyword && matchesGenre) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    // イベントを設定（文字が入力されるたび、またはプルダウンが変わるたびに実行）
+    searchBox.addEventListener('input', applyFilter);
+    genreFilter.addEventListener('change', applyFilter);
+
+    // 既存の updateGenreSuggestions 関数を拡張し、フィルター用のプルダウンも自動更新するようにフック
+    const originalUpdateGenreSuggestions = updateGenreSuggestions;
+    updateGenreSuggestions = function() {
+      // 元々の処理をそのまま実行
+      originalUpdateGenreSuggestions();
+
+      // フィルター用セレクトボックスの中身を現在のジャンル一覧に更新
+      if (!appData.items || !Array.isArray(appData.items)) return;
+      const genres = [...new Set(appData.items.map(item => item.genre).filter(g => g && g.trim() !== ''))];
+      
+      const currentSelected = genreFilter.value; // 現在選んでいるジャンルを記憶
+      
+      genreFilter.innerHTML = '<option value="">📁 すべてのジャンル</option>' + 
+        genres.map(g => `<option value="${g}">${g}</option>`).join('');
+        
+      genreFilter.value = currentSelected; // 記憶していた選択状態を復元
+    };
+
+    // アプリ再描画（renderApp）の後に、現在のフィルター状態を強制適用する処理をフック
+    const originalRenderApp = renderApp;
+    renderApp = function() {
+      originalRenderApp();
+      applyFilter(); // 再描画されても検索・絞り込み状態を維持する
+    };
   </script>
 </body>
 </html>
