@@ -261,7 +261,6 @@
       }
     }
 
-    // 変更：確実に現在の入力欄の最新状態を反映してから保存を行うように修正
     async function executeSave(isAutoSave = false) {
       const saveBtn = document.getElementById('btn-save');
       
@@ -270,7 +269,6 @@
         saveBtn.innerText = "⏳ 保存中...";
       }
 
-      // 画面の「今入力されている値」を確実にappDataに集約
       collectFormData(); 
 
       try {
@@ -291,9 +289,6 @@
       const updatedItems = [];
 
       rows.forEach(row => {
-        const index = parseInt(row.dataset.index);
-        
-        // 各行の入力項目を取得
         const chk = row.querySelector('.custom-checkbox');
         const inputGenre = row.querySelector('.input-genre');
         const inputName = row.querySelector('.input-name');
@@ -303,7 +298,6 @@
 
         const nameValue = inputName.value.trim();
         
-        // 名称が空でないものを有効なデータとして収集（新規・既存問わず）
         if (nameValue !== '') {
           updatedItems.push({
             checked: chk ? chk.checked : false,
@@ -314,7 +308,6 @@
         }
       });
 
-      // ジャンルで自動ソート
       updatedItems.sort((a, b) => {
         if (!a.genre && b.genre) return 1;
         if (a.genre && !b.genre) return -1;
@@ -326,41 +319,34 @@
     }
 
     function renderApp() {
-      // 現在フォーカスが当たっている要素の「ジャンル/名称/備考」の区別と「値」を記憶
       const activeEl = document.activeElement;
       let savedFocusInfo = null;
       if (activeEl && activeEl.classList.contains('cell-input')) {
         const row = activeEl.closest('tr');
         if (row) {
           savedFocusInfo = {
-            className: activeEl.classList[1], // input-genre, input-name, input-memo
-            value: activeEl.value // 入力中の値を記憶
+            className: activeEl.classList[1], 
+            value: activeEl.value 
           };
         }
       }
 
       listBody.innerHTML = '';
 
-      // 1. 保存アイテムを順に描画
       if (appData.items && Array.isArray(appData.items)) {
         appData.items.forEach((item, index) => {
           createRowHTML(item, index);
         });
       }
 
-      // 2. 最下部に新しい入力用の空行を追加
       createRowHTML({ checked: false, genre: '', name: '', memo: '' }, -1);
-
-      // 3. ジャンルサジェストの更新
       updateGenreSuggestions();
 
-      // 4. フォーカスの確実な復元（値が一致する入力欄を探して戻す）
       if (savedFocusInfo) {
         const inputs = listBody.querySelectorAll(`.${savedFocusInfo.className}`);
         for (let input of inputs) {
           if (input.value === savedFocusInfo.value) {
             input.focus();
-            // カーソルを末尾へ移動
             const val = input.value;
             input.value = '';
             input.value = val;
@@ -409,22 +395,21 @@
         });
       }
 
-      // 修正：changeイベントもフックすることで、フォーカスが外れる際のデータ取得漏れを防ぐ
+      // 🛠️ 改善：1文字ずつの入力干渉（changeイベント等）を廃止し、完全に「枠から外れた時 (blur)」だけに絞り込む
       const handleInputChange = () => {
         executeSave(true);
       };
-
-      inputGenre.addEventListener('change', handleInputChange);
-      inputName.addEventListener('change', handleInputChange);
-      inputMemo.addEventListener('change', handleInputChange);
       
+      // blur（フォーカスアウト）のみを登録
       inputGenre.addEventListener('blur', handleInputChange);
       inputName.addEventListener('blur', handleInputChange);
       inputMemo.addEventListener('blur', handleInputChange);
 
+      // Enterキーで入力を確定した時は、フォーカスを明示的に外すことで即時自動保存
       [inputGenre, inputName, inputMemo].forEach(input => {
         input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
+          // IME（日本語漢字変換）の決定エンターキーは除外し、純粋な入力確定時のみ動作させる
+          if (e.key === 'Enter' && !e.isComposing) {
             input.blur(); 
           }
         });
