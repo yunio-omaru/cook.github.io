@@ -2,6 +2,66 @@
   "items": [
     {
       "checked": false,
+      "genre": "食材　調味料",
+      "name": "ゼラチン",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　調味料",
+      "name": "白コショウ",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　調味料",
+      "name": "黒コショウ",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　調味料",
+      "name": "醤油",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　調味料",
+      "name": "ラカント",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　調味料",
+      "name": "料理酒",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　調味料",
+      "name": "みりん",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　調味料",
+      "name": "米粉",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　調味料",
+      "name": "はちみつ",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　調味料",
+      "name": "レモン汁",
+      "memo": ""
+    },
+    {
+      "checked": false,
       "genre": "食材　野菜",
       "name": "キャベツ",
       "memo": ""
@@ -20,7 +80,7 @@
     },
     {
       "checked": false,
-      "genre": "",
+      "genre": "食材　野菜",
       "name": "トマト",
       "memo": ""
     }
