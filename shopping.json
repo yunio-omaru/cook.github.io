@@ -61,19 +61,19 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　野菜",
       "name": "キャベツ",
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　野菜",
       "name": "レタス",
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　野菜",
       "name": "人参",
       "memo": ""
@@ -82,6 +82,18 @@
       "checked": false,
       "genre": "食材　野菜",
       "name": "トマト",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　野菜以外",
+      "name": "えのき",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　野菜以外",
+      "name": "豚肉",
       "memo": ""
     },
     {
