@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>買い物リスト - ゴリのレシピ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #111;
+      --card: #1b1b1b;
+      --accent: #e53935;
+      --accent-soft: #ff7043;
+      --text: #f5f5f5;
+      --muted: #aaaaaa;
+      --border: #333;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #222 0, #050505 55%, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-title {
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-size: 0.95rem;
+    }
+    .icon-btn {
+      border: 1px solid var(--border);
+      background: #151515;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 0.25rem 0.7rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .icon-btn:hover {
+      background: #222;
+      border-color: var(--accent-soft);
+      transform: translateY(-1px);
+    }
+
+    /* Layout */
+    main {
+      padding: 1rem;
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+      flex: 1;
+    }
+
+    .list-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 1rem;
+    }
+
+    /* Table Style */
+    .shopping-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(10, 10, 10, 0.9);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .shopping-table th, 
+    .shopping-table td {
+      padding: 0.6rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .shopping-table th {
+      background: #151515;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    
+    /* Column widths */
+    .col-check { width: 40px; text-align: center; }
+    .col-genre { width: 25%; }
+    .col-name { width: 40%; }
+    .col-memo { width: auto; }
+    .col-action { width: 50px; text-align: center; }
+
+    .shopping-table th.col-check { text-align: center; }
+
+    /* Inputs */
+    .cell-input {
+      width: 100%;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text);
+      padding: 0.3rem 0.4rem;
+      font-size: 0.85rem;
+      border-radius: 0.25rem;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .cell-input:focus {
+      outline: none;
+      background: #151515;
+      border-color: var(--accent-soft);
+    }
+    
+    /* Checkbox */
+    .checkbox-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .custom-checkbox {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    /* Checked row styling */
+    .completed-row .cell-input {
+      color: var(--muted);
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    /* Delete button */
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: #555;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: color 0.15s;
+    }
+    .delete-btn:hover {
+      color: var(--accent);
+    }
+
+    @media (max-width: 600px) {
+      .shopping-table th, .shopping-table td {
+        padding: 0.4rem;
+      }
+      .cell-input {
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-title">買い物リスト</div>
+    <div>
+      <a href="index.html" class="icon-btn">🍳 <span>ゴリのレシピ</span></a>
+    </div>
+  </header>
+
+  <main>
+    <div class="list-actions">
+      <button class="icon-btn" id="clearCheckedBtn" style="font-size: 0.75rem; color: var(--muted);">チェック済を削除</button>
+    </div>
+
+    <table class="shopping-table">
+      <thead>
+        <tr>
+          <th class="col-check">☑</th>
+          <th class="col-genre">ジャンル</th>
+          <th class="col-name">名称</th>
+          <th class="col-memo">備考</th>
+          <th class="col-action"></th>
+        </tr>
+      </thead>
+      <tbody id="listBody">
+        </tbody>
+    </table>
+  </main>
+
+  <datalist id="genreSuggestions"></datalist>
+
+  <script>
+    // ローカルストレージからデータを読み込み、なければ空配列
+    let items = JSON.parse(localStorage.getItem('gori_shopping_items')) || [];
+
+    const listBody = document.getElementById('listBody');
+    const genreSuggestions = document.getElementById('genreSuggestions');
+    const clearCheckedBtn = document.getElementById('clearCheckedBtn');
+
+    // データ保存と再描画
+    function saveAndRender() {
+      // 有効なデータ（名称が空でないもの）をジャンルごとにソート
+      // ジャンルが未入力のものは後ろに
+      items.sort((a, b) => {
+        if (!a.genre && b.genre) return 1;
+        if (a.genre && !b.genre) return -1;
+        if (a.genre === b.genre) return 0;
+        return a.genre.localeCompare(b.genre, 'ja');
+      });
+
+      localStorage.setItem('gori_shopping_items', JSON.stringify(items));
+      renderList();
+      updateGenreSuggestions();
+    }
+
+    // リストの描画
+    function renderList() {
+      listBody.innerHTML = '';
+
+      // 保存されているアイテムの行を作成
+      items.forEach((item, index) => {
+        createRowHTML(item, index);
+      });
+
+      // 常に最下部に新しい入力用の空行を追加（無限追加のトリガー）
+      createRowHTML({ checked: false, genre: '', name: '', memo: '' }, -1);
+    }
+
+    // 行のHTML生成
+    function createRowHTML(item, index) {
+      const tr = document.createElement('tr');
+      if (item.checked) tr.classList.add('completed-row');
+
+      // 新規行か既存行か
+      const isNew = index === -1;
+
+      tr.innerHTML = `
+        <td class="col-check">
+          <div class="checkbox-wrapper">
+            <input type="checkbox" class="custom-checkbox" ${item.checked ? 'checked' : ''} ${isNew ? 'disabled' : ''}>
+          </div>
+        </td>
+        <td class="col-genre">
+          <input type="text" class="cell-input input-genre" list="genreSuggestions" value="${item.genre}" placeholder="例: 食材">
+        </td>
+        <td class="col-name">
+          <input type="text" class="cell-input input-name" value="${item.name}" placeholder="＋ 追加...">
+        </td>
+        <td class="col-memo">
+          <input type="text" class="cell-input input-memo" value="${item.memo}" placeholder="">
+        </td>
+        <td class="col-action">
+          ${isNew ? '' : '<button class="delete-btn" title="削除">×</button>'}
+        </td>
+      `;
+
+      // イベントリスナーの登録
+      const chk = tr.querySelector('.custom-checkbox');
+      const inputGenre = tr.querySelector('.input-genre');
+      const inputName = tr.querySelector('.input-name');
+      const inputMemo = tr.querySelector('.input-memo');
+      const delBtn = tr.querySelector('.delete-btn');
+
+      // チェックボックス変更時
+      if (chk) {
+        chk.addEventListener('change', () => {
+          items[index].checked = chk.checked;
+          saveAndRender();
+        });
+      }
+
+      // 入力欄の変更時（フォーカスが外れた、またはEnterで確定時）
+      const handleInputChange = () => {
+        const gValue = inputGenre.value.trim();
+        const nValue = inputName.value.trim();
+        const mValue = inputMemo.value.trim();
+
+        if (isNew) {
+          // 最下部の空行の「名称」に文字が入ったらデータ配列に新規追加
+          if (nValue !== '') {
+            items.push({ checked: false, genre: gValue, name: nValue, memo: mValue });
+            saveAndRender();
+          }
+        } else {
+          // 既存行の更新
+          if (nValue === '') {
+            // 名称が空になったら削除
+            items.splice(index, 1);
+          } else {
+            items[index].genre = gValue;
+            items[index].name = nValue;
+            items[index].memo = mValue;
+          }
+          saveAndRender();
+        }
+      };
+
+      // ジャンルや名称、備考からフォーカスが外れたら自動ソート・保存
+      inputGenre.addEventListener('blur', handleInputChange);
+      inputName.addEventListener('blur', handleInputChange);
+      inputMemo.addEventListener('blur', handleInputChange);
+
+      // Enterキーでも確定できるように
+      [inputGenre, inputName, inputMemo].forEach(input => {
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            input.blur(); 
+          }
+        });
+      });
+
+      // 削除ボタン
+      if (delBtn) {
+        delBtn.addEventListener('click', () => {
+          items.splice(index, 1);
+          saveAndRender();
+        });
+      }
+
+      listBody.appendChild(tr);
+    }
+
+    // ジャンルのプルダウン候補（datalist）を更新
+    function updateGenreSuggestions() {
+      const genres = [...new Set(items.map(item => item.genre).filter(g => g !== ''))];
+      genreSuggestions.innerHTML = genres.map(g => `<option value="${g}"></option>`).join('');
+    }
+
+    // チェック済を一括削除するボタン
+    clearCheckedBtn.addEventListener('click', () => {
+      if(confirm('チェックのついたアイテムを削除しますか？')) {
+        items = items.filter(item => !item.checked);
+        saveAndRender();
+      }
+    });
+
+    // 初回描画
+    saveAndRender();
+  </script>
+</body>
+</html>
