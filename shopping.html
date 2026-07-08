@@ -62,6 +62,27 @@
       border-color: var(--accent-soft);
       transform: translateY(-1px);
     }
+    .btn-sync {
+      background-color: #27ae60;
+      border-color: #27ae60;
+    }
+    .btn-sync:hover {
+      background-color: #2ecc71;
+      border-color: #2ecc71;
+    }
+
+    /* 同期ステータスバー */
+    .sync-status-bar {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #2ecc71;
+      background: rgba(39, 174, 96, 0.1);
+      border: 1px solid rgba(39, 174, 96, 0.3);
+      padding: 6px 12px;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
 
     /* Layout */
     main {
@@ -74,7 +95,8 @@
 
     .list-actions {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 1rem;
     }
 
@@ -107,8 +129,6 @@
     .col-name { width: 40%; }
     .col-memo { width: auto; }
     .col-action { width: 50px; text-align: center; }
-
-    .shopping-table th.col-check { text-align: center; }
 
     /* Inputs */
     .cell-input {
@@ -174,12 +194,15 @@
 
   <header>
     <div class="header-title">買い物リスト</div>
-    <div>
+    <div style="display: flex; gap: 0.5rem;">
+      <button id="btn-save" class="icon-btn btn-sync" onclick="executeSave()">💾 保存</button>
       <a href="index.html" class="icon-btn">🍳 <span>ゴリのレシピ</span></a>
     </div>
   </header>
 
   <main>
+    <div id="sync-status" class="sync-status-bar">🔄 接続確認中...</div>
+
     <div class="list-actions">
       <button class="icon-btn" id="clearCheckedBtn" style="font-size: 0.75rem; color: var(--muted);">チェック済を削除</button>
     </div>
@@ -202,48 +225,163 @@
   <datalist id="genreSuggestions"></datalist>
 
   <script>
-    // ローカルストレージからデータを読み込み、なければ空配列
-    let items = JSON.parse(localStorage.getItem('gori_shopping_items')) || [];
+    // 🔗 GASのWebアプリURL
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwPoY-Gev1Hwq6ljC0m1Y_PFLPSWL6ZrTo5zt0XJc42syyyuMa8qQFQumoquIsP70XG/exec";
+
+    // 📦 アプリデータ
+    let appData = {
+      items: []
+    };
 
     const listBody = document.getElementById('listBody');
     const genreSuggestions = document.getElementById('genreSuggestions');
     const clearCheckedBtn = document.getElementById('clearCheckedBtn');
 
-    // データ保存と再描画
-    function saveAndRender() {
-      // 有効なデータ（名称が空でないもの）をジャンルごとにソート
-      // ジャンルが未入力のものは後ろに
-      items.sort((a, b) => {
+    // 起動時の初期処理
+    document.addEventListener('DOMContentLoaded', () => {
+      loadFromSpreadsheet();
+    });
+
+    /*** 📥 スプレッドシートからデータを読み込む (GET)
+    */
+    async function loadFromSpreadsheet() {
+      const statusLabel = document.getElementById('sync-status');
+      statusLabel.innerText = "🔄 スプレッドシートからデータを同期中...";
+      try {
+        const res = await fetch(GAS_API_URL);
+        if(res.ok) {
+          const data = await res.json();
+          if (data && data.items) {
+            appData = data;
+          } else if (data && Array.isArray(data)) {
+            appData.items = data;
+          }
+          statusLabel.innerText = "✅ 同期完了";
+          renderApp();
+        }
+      } catch(e) {
+        console.error(e);
+        statusLabel.innerText = "❌ 読み込み同期エラー";
+        renderApp();
+      }
+    }
+
+    /*** 💾 保存処理（共通呼び出し用の中継関数）
+    */
+    async function executeSave(isAutoSave = false) {
+      const saveBtn = document.getElementById('btn-save');
+      
+      // 手動保存のときだけボタンを「保存中」表示にして連打防止する
+      if (!isAutoSave) {
+        saveBtn.disabled = true;
+        saveBtn.innerText = "⏳ 保存中...";
+      }
+
+      try {
+        collectFormData(); // 画面の最新状態をappDataに集約
+        await saveToSpreadsheet();
+      } catch (e) {
+        console.error(e);
+        if (!isAutoSave) alert("保存処理でエラーが発生しました");
+      } finally {
+        if (!isAutoSave) {
+          saveBtn.disabled = false;
+          saveBtn.innerText = "💾 保存";
+        }
+      }
+    }
+
+    /*** 📝 画面の入力値をappDataに集約する
+    */
+    function collectFormData() {
+      const rows = listBody.querySelectorAll('tr');
+      const updatedItems = [];
+
+      rows.forEach(row => {
+        const index = parseInt(row.dataset.index);
+        if (index === -1) return; // 新規入力用の空行はスキップ
+
+        const chk = row.querySelector('.custom-checkbox');
+        const inputGenre = row.querySelector('.input-genre');
+        const inputName = row.querySelector('.input-name');
+        const inputMemo = row.querySelector('.input-memo');
+
+        const nameValue = inputName.value.trim();
+        // 名称が空のものは除外（自動削除扱い）
+        if (nameValue !== '') {
+          updatedItems.push({
+            checked: chk.checked,
+            genre: inputGenre.value.trim(),
+            name: nameValue,
+            memo: inputMemo.value.trim()
+          });
+        }
+      });
+
+      // ジャンルで自動ソート
+      updatedItems.sort((a, b) => {
         if (!a.genre && b.genre) return 1;
         if (a.genre && !b.genre) return -1;
         if (a.genre === b.genre) return 0;
         return a.genre.localeCompare(b.genre, 'ja');
       });
 
-      localStorage.setItem('gori_shopping_items', JSON.stringify(items));
-      renderList();
-      updateGenreSuggestions();
+      appData.items = updatedItems;
     }
 
-    // リストの描画
-    function renderList() {
+    /*** 💻 データを画面に描写する
+    */
+    function renderApp() {
+      // 現在フォーカスが当たっている要素の情報を一時退避
+      const activeEl = document.activeElement;
+      let savedFocusInfo = null;
+      if (activeEl && activeEl.classList.contains('cell-input')) {
+        const row = activeEl.closest('tr');
+        if (row) {
+          savedFocusInfo = {
+            index: row.dataset.index,
+            className: activeEl.classList[1] // input-genre, input-name, input-memo のいずれか
+          };
+        }
+      }
+
       listBody.innerHTML = '';
 
-      // 保存されているアイテムの行を作成
-      items.forEach((item, index) => {
-        createRowHTML(item, index);
-      });
+      // 1. 保存アイテムを順に描画
+      if (appData.items && Array.isArray(appData.items)) {
+        appData.items.forEach((item, index) => {
+          createRowHTML(item, index);
+        });
+      }
 
-      // 常に最下部に新しい入力用の空行を追加（無限追加のトリガー）
+      // 2. 最下部に新しい入力用の空行を追加
       createRowHTML({ checked: false, genre: '', name: '', memo: '' }, -1);
+
+      // 3. ジャンルサジェストの更新
+      updateGenreSuggestions();
+
+      // 4. 自動ソート等で再描画された後、元の入力欄にフォーカスを復元する
+      if (savedFocusInfo) {
+        const targetRow = listBody.querySelector(`tr[data-index="${savedFocusInfo.index}"]`);
+        if (targetRow) {
+          const targetInput = targetRow.querySelector(`.${savedFocusInfo.className}`);
+          if (targetInput) {
+            targetInput.focus();
+            // カーソルを文字の一番後ろに移動させる
+            const val = targetInput.value;
+            targetInput.value = '';
+            targetInput.value = val;
+          }
+        }
+      }
     }
 
-    // 行のHTML生成
+    // 行のHTMLを動的に生成する
     function createRowHTML(item, index) {
       const tr = document.createElement('tr');
+      tr.dataset.index = index;
       if (item.checked) tr.classList.add('completed-row');
 
-      // 新規行か既存行か
       const isNew = index === -1;
 
       tr.innerHTML = `
@@ -253,66 +391,49 @@
           </div>
         </td>
         <td class="col-genre">
-          <input type="text" class="cell-input input-genre" list="genreSuggestions" value="${item.genre}" placeholder="例: 食材">
+          <input type="text" class="cell-input input-genre" list="genreSuggestions" value="${item.genre || ''}" placeholder="例: 食材">
         </td>
         <td class="col-name">
-          <input type="text" class="cell-input input-name" value="${item.name}" placeholder="＋ 追加...">
+          <input type="text" class="cell-input input-name" value="${item.name || ''}" placeholder="＋ 追加...">
         </td>
         <td class="col-memo">
-          <input type="text" class="cell-input input-memo" value="${item.memo}" placeholder="">
+          <input type="text" class="cell-input input-memo" value="${item.memo || ''}" placeholder="">
         </td>
         <td class="col-action">
           ${isNew ? '' : '<button class="delete-btn" title="削除">×</button>'}
         </td>
       `;
 
-      // イベントリスナーの登録
       const chk = tr.querySelector('.custom-checkbox');
       const inputGenre = tr.querySelector('.input-genre');
       const inputName = tr.querySelector('.input-name');
       const inputMemo = tr.querySelector('.input-memo');
       const delBtn = tr.querySelector('.delete-btn');
 
-      // チェックボックス変更時
+      // チェックボックス変更時は、引数に true を渡して自動保存（非同期）を走らせる
       if (chk) {
         chk.addEventListener('change', () => {
-          items[index].checked = chk.checked;
-          saveAndRender();
+          executeSave(true);
         });
       }
 
-      // 入力欄の変更時（フォーカスが外れた、またはEnterで確定時）
+      // 入力欄からフォーカスが外れた（あるいは別行へ移った）瞬間に自動保存
       const handleInputChange = () => {
-        const gValue = inputGenre.value.trim();
         const nValue = inputName.value.trim();
-        const mValue = inputMemo.value.trim();
-
         if (isNew) {
-          // 最下部の空行の「名称」に文字が入ったらデータ配列に新規追加
           if (nValue !== '') {
-            items.push({ checked: false, genre: gValue, name: nValue, memo: mValue });
-            saveAndRender();
+            executeSave(true);
           }
         } else {
-          // 既存行の更新
-          if (nValue === '') {
-            // 名称が空になったら削除
-            items.splice(index, 1);
-          } else {
-            items[index].genre = gValue;
-            items[index].name = nValue;
-            items[index].memo = mValue;
-          }
-          saveAndRender();
+          executeSave(true);
         }
       };
 
-      // ジャンルや名称、備考からフォーカスが外れたら自動ソート・保存
       inputGenre.addEventListener('blur', handleInputChange);
       inputName.addEventListener('blur', handleInputChange);
       inputMemo.addEventListener('blur', handleInputChange);
 
-      // Enterキーでも確定できるように
+      // Enterキーで入力を確定した時も即座に自動保存が走るようにする
       [inputGenre, inputName, inputMemo].forEach(input => {
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
@@ -321,33 +442,56 @@
         });
       });
 
-      // 削除ボタン
+      // 削除（×）ボタン
       if (delBtn) {
         delBtn.addEventListener('click', () => {
-          items.splice(index, 1);
-          saveAndRender();
+          inputName.value = ''; // 名称を空にして自動保存に回すことで削除扱いにする
+          executeSave(true);
         });
       }
 
       listBody.appendChild(tr);
     }
 
-    // ジャンルのプルダウン候補（datalist）を更新
+    // ジャンルのプルダウン候補を更新
     function updateGenreSuggestions() {
-      const genres = [...new Set(items.map(item => item.genre).filter(g => g !== ''))];
+      if (!appData.items || !Array.isArray(appData.items)) return;
+      const genres = [...new Set(appData.items.map(item => item.genre).filter(g => g && g.trim() !== ''))];
       genreSuggestions.innerHTML = genres.map(g => `<option value="${g}"></option>`).join('');
     }
 
     // チェック済を一括削除するボタン
     clearCheckedBtn.addEventListener('click', () => {
       if(confirm('チェックのついたアイテムを削除しますか？')) {
-        items = items.filter(item => !item.checked);
-        saveAndRender();
+        if (appData.items && Array.isArray(appData.items)) {
+          appData.items = appData.items.filter(item => !item.checked);
+          // 削除後は手動保存と同様に上部バーで進捗が分かりやすいよう通常のsaveを走らせる
+          executeSave(false);
+        }
       }
     });
 
-    // 初回描画
-    saveAndRender();
+    /*** 📤 スプレッドシートへデータを書き込む (POST)
+    */
+    async function saveToSpreadsheet() {
+      const statusLabel = document.getElementById('sync-status');
+      statusLabel.innerText = "💾 クラウドに保存中...";
+      try {
+        const res = await fetch(GAS_API_URL, { 
+          method: "POST", 
+          body: JSON.stringify(appData) 
+        });
+        if (res.ok) {
+          statusLabel.innerText = "✅ 自動保存しました！";
+          renderApp(); // 自動ソートされた最新状態で画面を更新
+        } else {
+          statusLabel.innerText = "❌ クラウド保存エラー(ステータス不正)";
+        }
+      } catch(e) {
+        console.error(e);
+        statusLabel.innerText = "❌ クラウド保存エラー ";
+      }
+    }
   </script>
 </body>
 </html>
