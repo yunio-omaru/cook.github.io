@@ -87,7 +87,7 @@
     /* Layout */
     main {
       padding: 1rem;
-      max-width: 800px;
+      max-width: 1000px; /* 列が増えたため少し幅を広げました */
       width: 100%;
       margin: 0 auto;
       flex: 1;
@@ -114,6 +114,7 @@
       padding: 0.6rem;
       text-align: left;
       border-bottom: 1px solid var(--border);
+      vertical-align: top; /* 複数行対応のため上寄せ */
     }
     .shopping-table th {
       background: #151515;
@@ -125,8 +126,10 @@
     
     /* Column widths */
     .col-check { width: 40px; text-align: center; }
-    .col-genre { width: 25%; }
-    .col-name { width: 40%; }
+    .col-genre { width: 12%; }
+    .col-name { width: 20%; }
+    .col-points { width: 25%; } /* 選ぶポイント */
+    .col-history { width: 25%; } /* 購入日と金額 */
     .col-memo { width: auto; }
     .col-action { width: 50px; text-align: center; }
 
@@ -147,6 +150,45 @@
       border-color: var(--accent-soft);
     }
     
+    /* 多段入力用のボックスラッパー */
+    .multi-input-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .multi-input-row {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .inner-add-btn {
+      background: #222;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 0.1rem 0.3rem;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+    .inner-add-btn:hover {
+      border-color: var(--accent-soft);
+      color: var(--text);
+    }
+    .toggle-expand-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--accent-soft);
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 2px;
+      display: inline-block;
+    }
+    .toggle-expand-btn:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
     /* Checkbox */
     .checkbox-wrapper {
       display: flex;
@@ -180,7 +222,7 @@
       color: var(--accent);
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 768px) {
       .shopping-table th, .shopping-table td {
         padding: 0.4rem;
       }
@@ -202,14 +244,14 @@
 
   <main>
     <div id="sync-status" class="sync-status-bar">🔄 接続確認中...</div>
-    
+
     <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
       <input type="text" id="searchBox" class="cell-input" style="flex: 1; min-width: 150px; background: rgba(20,20,20,0.8); border: 1px solid var(--border);" placeholder="🔍 キーワードで検索（例: 茄子）">
       <select id="genreFilter" class="cell-input" style="width: auto; min-width: 120px; background: rgba(20,20,20,0.8); border: 1px solid var(--border); color: var(--text);">
         <option value="">📁 すべてのジャンル</option>
       </select>
     </div>
-    
+
     <div class="list-actions">
       <button class="icon-btn" id="clearCheckedBtn" style="font-size: 0.75rem; color: var(--muted);">チェック済を削除</button>
     </div>
@@ -220,6 +262,8 @@
           <th class="col-check">☑</th>
           <th class="col-genre">ジャンル</th>
           <th class="col-name">名称</th>
+          <th class="col-points">選ぶポイント</th>
+          <th class="col-history">購入日と金額</th>
           <th class="col-memo">備考</th>
           <th class="col-action"></th>
         </tr>
@@ -242,6 +286,10 @@
     let appData = {
       items: []
     };
+
+    // 各マスの展開状態を記憶するオブジェクト（再描画されても閉じないようにするため）
+    // キー形式: "行インデックス-列名" (例: "2-points")
+    let expandedStates = {};
 
     // 🔒 通信中の連続操作バグを防ぐためのフラグ
     let isSavingNow = false; 
@@ -279,12 +327,11 @@
 
     // 保存処理（手動・自動の中継）
     async function executeSave(isAutoSave = false) {
-      // すでに保存通信が走っている場合は重複処理をしない（最重要の安全対策）
       if (isSavingNow) return; 
 
       if (isAutoSave) {
         isSavingNow = true;
-        setInputsDisabled(true); // 🛠️ 入力欄を一時ロックして変換崩れを徹底防御
+        setInputsDisabled(true); 
         collectFormData();
         await saveToSpreadsheet();
         return;
@@ -295,7 +342,7 @@
       if (!token) return; 
 
       isSavingNow = true;
-      setInputsDisabled(true); // ロック
+      setInputsDisabled(true); 
       saveBtn.disabled = true;
       saveBtn.innerText = "⏳ GitHubに保存中...";
 
@@ -308,17 +355,19 @@
         alert("GitHubへの保存処理でエラーが発生しました。");
       } finally {
         isSavingNow = false;
-        setInputsDisabled(false); // ロック解除
+        setInputsDisabled(false); 
         saveBtn.disabled = false;
         saveBtn.innerText = "💾 保存";
       }
     }
 
-    // 🛠️ クラウド保存中に入力欄やボタンを一時的に触れなくする防御関数
+    // クラウド保存中に入力欄やボタンを一時的に触れなくする防御関数
     function setInputsDisabled(disabled) {
-      const inputs = listBody.querySelectorAll('.cell-input, .custom-checkbox, .delete-btn');
+      const inputs = listBody.querySelectorAll('.cell-input, .custom-checkbox, .delete-btn, .inner-add-btn, .toggle-expand-btn');
       inputs.forEach(input => {
         input.disabled = disabled;
+        if(disabled) input.style.opacity = "0.5";
+        else input.style.opacity = "1";
       });
       clearCheckedBtn.disabled = disabled;
     }
@@ -384,10 +433,11 @@
         console.error(e);
       } finally {
         isSavingNow = false;
-        setInputsDisabled(false); // スプシ自動保存が終わったらロックを安全に解除
+        setInputsDisabled(false); 
       }
     }
 
+    // 画面の入力内容をかき集めてappDataに格納する関数
     function collectFormData() {
       const rows = listBody.querySelectorAll('tr');
       const updatedItems = [];
@@ -399,19 +449,27 @@
         const inputMemo = row.querySelector('.input-memo');
 
         if (!inputName) return;
-
         const nameValue = inputName.value.trim();
-        
-        if (nameValue !== '') {
-          updatedItems.push({
-            checked: chk ? chk.checked : false,
-            genre: inputGenre ? inputGenre.value.trim() : '',
-            name: nameValue,
-            memo: inputMemo ? inputMemo.value.trim() : ''
-          });
-        }
+        if (nameValue === '') return;
+
+        // 🌟 追加した多段カラム（選ぶポイント / 購入履歴）の値を配列として回収
+        const pointsInputs = row.querySelectorAll('.input-point');
+        const pointsArray = Array.from(pointsInputs).map(i => i.value.trim()).filter(v => v !== '');
+
+        const historyInputs = row.querySelectorAll('.input-history');
+        const historyArray = Array.from(historyInputs).map(i => i.value.trim()).filter(v => v !== '');
+
+        updatedItems.push({
+          checked: chk ? chk.checked : false,
+          genre: inputGenre ? inputGenre.value.trim() : '',
+          name: nameValue,
+          points: pointsArray, // 配列データとして保持
+          history: historyArray, // 配列データとして保持
+          memo: inputMemo ? inputMemo.value.trim() : ''
+        });
       });
 
+      // ジャンル順にソート
       updatedItems.sort((a, b) => {
         if (!a.genre && b.genre) return 1;
         if (a.genre && !b.genre) return -1;
@@ -422,14 +480,21 @@
       appData.items = updatedItems;
     }
 
+    // 画面をリフレッシュして最新データを描画する関数
     function renderApp() {
+      // 現在フォーカスが当たっている入力欄の情報を一時記憶
       const activeEl = document.activeElement;
       let savedFocusInfo = null;
       if (activeEl && activeEl.classList.contains('cell-input')) {
         const row = activeEl.closest('tr');
         if (row) {
+          // 何行目の、どのクラスの、何番目の入力欄かを特定できるようにする
+          const inputsInRow = Array.from(row.querySelectorAll(`.${activeEl.classList[1]}`));
+          const inputIndex = inputsInRow.indexOf(activeEl);
           savedFocusInfo = {
+            rowIndex: row.dataset.index,
             className: activeEl.classList[1], 
+            inputIndex: inputIndex,
             value: activeEl.value 
           };
         }
@@ -443,23 +508,30 @@
         });
       }
 
-      createRowHTML({ checked: false, genre: '', name: '', memo: '' }, -1);
-      updateGenreSuggestions();
+      // 一番下の新規追加用空行
+      createRowHTML({ checked: false, genre: '', name: '', points: [], history: [], memo: '' }, -1);
+      
+      if (typeof updateGenreSuggestions === 'function') {
+        updateGenreSuggestions();
+      }
 
+      // フォーカスの復元ロジック
       if (savedFocusInfo) {
-        const inputs = listBody.querySelectorAll(`.${savedFocusInfo.className}`);
-        for (let input of inputs) {
-          if (input.value === savedFocusInfo.value) {
-            input.focus();
-            const val = input.value;
-            input.value = '';
-            input.value = val;
-            break;
+        const targetRow = listBody.querySelector(`tr[data-index="${savedFocusInfo.rowIndex}"]`);
+        if (targetRow) {
+          const inputs = targetRow.querySelectorAll(`.${savedFocusInfo.className}`);
+          const targetInput = inputs[savedFocusInfo.inputIndex];
+          if (targetInput) {
+            targetInput.focus();
+            const val = targetInput.value;
+            targetInput.value = '';
+            targetInput.value = val;
           }
         }
       }
     }
 
+    // 1行分のHTMLを生成してイベントを紐付けるメイン関数
     function createRowHTML(item, index) {
       const tr = document.createElement('tr');
       tr.dataset.index = index;
@@ -467,6 +539,60 @@
 
       const isNew = index === -1;
 
+      // 配列データの初期化
+      const pointsList = Array.isArray(item.points) ? item.points : (item.points ? [item.points] : []);
+      const historyList = Array.isArray(item.history) ? item.history : (item.history ? [item.history] : []);
+
+      // 展開状態の取得（デフォルトは折りたたみ）
+      const isPointsExpanded = expandedStates[`${index}-points`] || false;
+      const isHistoryExpanded = expandedStates[`${index}-history`] || false;
+
+      // --- 1. 選ぶポイント列のHTML構築 ---
+      let pointsHTML = `<div class="multi-input-container">`;
+      const pointsShowCount = isPointsExpanded ? pointsList.length + 1 : 1; // 展開時は全行+新規枠、閉じている時は1行のみ
+      
+      for (let i = 0; i < Math.max(1, pointsShowCount); i++) {
+        const val = pointsList[i] || '';
+        // 閉じている時は2行目以降を表示しない
+        if (!isPointsExpanded && i > 0) break;
+        
+        pointsHTML += `
+          <div class="multi-input-row">
+            <input type="text" class="cell-input input-point" value="${val}" placeholder="・ポイント">
+          </div>`;
+      }
+      // ➕ボタンの制御（複数行ある場合のみ開閉ボタンを出す。新規登録行は最初から出さない）
+      if (!isNew && pointsList.length > 0) {
+        pointsHTML += `<div><button type="button" class="toggle-expand-btn" data-type="points">${isPointsExpanded ? '▲ 閉じる' : `➕ 展開 (${pointsList.length})`}</button></div>`;
+      } else if (isNew || isPointsExpanded) {
+        // 新規追加ボタン（セルの内側用）
+        pointsHTML += `<div><button type="button" class="inner-add-btn" data-type="points">＋ 項目追加</button></div>`;
+      }
+      pointsHTML += `</div>`;
+
+
+      // --- 2. 購入日と金額列のHTML構築 ---
+      let historyHTML = `<div class="multi-input-container">`;
+      const historyShowCount = isHistoryExpanded ? historyList.length + 1 : 1;
+      
+      for (let i = 0; i < Math.max(1, historyShowCount); i++) {
+        const val = historyList[i] || '';
+        if (!isHistoryExpanded && i > 0) break;
+        
+        historyHTML += `
+          <div class="multi-input-row">
+            <input type="text" class="cell-input input-history" value="${val}" placeholder="例: 7/8 150円">
+          </div>`;
+      }
+      if (!isNew && historyList.length > 0) {
+        historyHTML += `<div><button type="button" class="toggle-expand-btn" data-type="history">${isHistoryExpanded ? '▲ 閉じる' : `➕ 展開 (${historyList.length})`}</button></div>`;
+      } else if (isNew || isHistoryExpanded) {
+        historyHTML += `<div><button type="button" class="inner-add-btn" data-type="history">＋ 履歴追加</button></div>`;
+      }
+      historyHTML += `</div>`;
+
+
+      // --- 3. テーブル全体の反映 ---
       tr.innerHTML = `
         <td class="col-check">
           <div class="checkbox-wrapper">
@@ -479,6 +605,12 @@
         <td class="col-name">
           <input type="text" class="cell-input input-name" value="${item.name || ''}" placeholder="＋ 追加...">
         </td>
+        <td class="col-points">
+          ${pointsHTML}
+        </td>
+        <td class="col-history">
+          ${historyHTML}
+        </td>
         <td class="col-memo">
           <input type="text" class="cell-input input-memo" value="${item.memo || ''}" placeholder="">
         </td>
@@ -487,6 +619,7 @@
         </td>
       `;
 
+      // --- 4. 各種イベントリスナーの登録 ---
       const chk = tr.querySelector('.custom-checkbox');
       const inputGenre = tr.querySelector('.input-genre');
       const inputName = tr.querySelector('.input-name');
@@ -494,26 +627,54 @@
       const delBtn = tr.querySelector('.delete-btn');
 
       if (chk) {
-        chk.addEventListener('change', () => {
-          executeSave(true);
-        });
+        chk.addEventListener('change', () => { executeSave(true); });
       }
 
-      const handleInputChange = () => {
-        executeSave(true);
-      };
+      const handleInputChange = () => { executeSave(true); };
       
-      // 🛠️ 改善：すべての入力欄（名称、ジャンル、備考）の検知タイミングを「blur」に統一
+      // 基本項目のフォーカスアウトイベント
       inputGenre.addEventListener('blur', handleInputChange);
       inputName.addEventListener('blur', handleInputChange);
       inputMemo.addEventListener('blur', handleInputChange);
 
+      // 追加された多段入力欄のフォーカスアウトイベント割り当て
+      tr.querySelectorAll('.input-point, .input-history').forEach(input => {
+        input.addEventListener('blur', handleInputChange);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.isComposing) { input.blur(); }
+        });
+      });
+
       [inputGenre, inputName, inputMemo].forEach(input => {
         input.addEventListener('keydown', (e) => {
-          // 漢字変換確定のEnterでは自動保存を無視。入力終了のEnterでのみ作動 
-          if (e.key === 'Enter' && !e.isComposing) {
-            input.blur(); 
-          }
+          if (e.key === 'Enter' && !e.isComposing) { input.blur(); }
+        });
+      });
+
+      // 項目追加（＋）ボタンの動作
+      tr.querySelectorAll('.inner-add-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const type = btn.dataset.type;
+          expandedStates[`${index}-${type}`] = true; // 強制的に展開状態にする
+          collectFormData();
+          // ダミーの空文字を末尾にねじ込んで再描画
+          if(type === 'points') appData.items[index].points.push('');
+          if(type === 'history') appData.items[index].history.push('');
+          renderApp();
+          
+          // 追加された新しい入力欄に自動フォーカス
+          const inputs = tr.querySelectorAll(`.input-${type === 'points' ? 'point' : 'history'}`);
+          if(inputs.length > 0) inputs[inputs.length - 1].focus();
+        });
+      });
+
+      // 展開 / 折りたたみボタンの動作
+      tr.querySelectorAll('.toggle-expand-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const type = btn.dataset.type;
+          const key = `${index}-${type}`;
+          expandedStates[key] = !expandedStates[key]; // 状態を反転
+          renderApp();
         });
       });
 
@@ -526,12 +687,86 @@
 
       listBody.appendChild(tr);
     }
+  </script>
+
+  <script>
+    const searchBox = document.getElementById('searchBox');
+    const genreFilter = document.getElementById('genreFilter');
+
+    function toKatakana(str) {
+      return str.replace(/[\u3041-\u3096]/g, function(match) {
+        return String.fromCharCode(match.charCodeAt(0) + 0x60);
+      });
+    }
+    function toHiragana(str) {
+      return str.replace(/[\u30a1-\u30f6]/g, function(match) {
+        return String.fromCharCode(match.charCodeAt(0) - 0x60);
+      });
+    }
+
+    function applyFilter() {
+      const rawKeyword = searchBox.value.toLowerCase().trim().normalize("NFKC");
+      const keywordHira = toHiragana(rawKeyword);
+      const keywordKata = toKatakana(rawKeyword);
+      const selectedGenre = genreFilter.value;
+      const rows = listBody.querySelectorAll('tr');
+
+      rows.forEach(row => {
+        if (row.dataset.index === "-1") {
+          row.style.display = '';
+          return;
+        }
+
+        const genreInput = row.querySelector('.input-genre');
+        const nameInput = row.querySelector('.input-name');
+        const memoInput = row.querySelector('.input-memo');
+        
+        // 多段入力のテキストもまとめて検索対象にする
+        const pointsInputs = Array.from(row.querySelectorAll('.input-point')).map(i => i.value).join(' ');
+        const historyInputs = Array.from(row.querySelectorAll('.input-history')).map(i => i.value).join(' ');
+
+        const genreText = genreInput ? genreInput.value.toLowerCase().normalize("NFKC") : '';
+        const nameText = nameInput ? nameInput.value.toLowerCase().normalize("NFKC") : '';
+        const memoText = memoInput ? memoInput.value.toLowerCase().normalize("NFKC") : '';
+        const combinedText = `${genreText} ${nameText} ${memoText} ${pointsInputs.toLowerCase().normalize("NFKC")} ${historyInputs.toLowerCase().normalize("NFKC")}`;
+
+        const matchesKeyword = !rawKeyword || 
+          combinedText.includes(keywordHira) || 
+          combinedText.includes(keywordKata);
+
+        const matchesGenre = !selectedGenre || (genreInput && genreInput.value === selectedGenre);
+
+        if (matchesKeyword && matchesGenre) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    searchBox.addEventListener('input', applyFilter);
+    genreFilter.addEventListener('change', applyFilter);
 
     function updateGenreSuggestions() {
       if (!appData.items || !Array.isArray(appData.items)) return;
       const genres = [...new Set(appData.items.map(item => item.genre).filter(g => g && g.trim() !== ''))];
+      
+      // データリスト（入力補完）の更新
       genreSuggestions.innerHTML = genres.map(g => `<option value="${g}"></option>`).join('');
+
+      // フィルタープルダウンの更新
+      const currentSelected = genreFilter.value;
+      genreFilter.innerHTML = '<option value="">📁 すべてのジャンル</option>' + 
+        genres.map(g => `<option value="${g}">${g}</option>`).join('');
+      genreFilter.value = currentSelected;
     }
+
+    // アプリの描画後にフィルターを自動適用するように上書き拡張 
+    const originalRenderApp = renderApp;
+    renderApp = function() {
+      originalRenderApp();
+      applyFilter(); 
+    };
 
     clearCheckedBtn.addEventListener('click', () => {
       if(confirm('チェックのついたアイテムを削除しますか？')) {
@@ -541,100 +776,6 @@
         }
       }
     });
-    
-    // =================================================================
-    // 🔍 検索・ジャンル絞り込み 追記コード（かな・カナ曖昧検索対応版）
-    // =================================================================
-    const searchBox = document.getElementById('searchBox');
-    const genreFilter = document.getElementById('genreFilter');
-
-    // ひらがなをカタカナに変換するヘルパー関数
-    function toKatakana(str) {
-      return str.replace(/[\u3041-\u3096]/g, function(match) {
-        return String.fromCharCode(match.charCodeAt(0) + 0x60);
-      });
-    }
-
-    // カタカナをひらがなに変換するヘルパー関数
-    function toHiragana(str) {
-      return str.replace(/[\u30a1-\u30f6]/g, function(match) {
-        return String.fromCharCode(match.charCodeAt(0) - 0x60);
-      });
-    }
-
-    // 検索ワード、または選択ジャンルが変わった時に表示を切り替える関数
-    function applyFilter() {
-      // 検索文字を正規化（全角英数を半角にしたり、濁点の結合度を揃える）
-      const rawKeyword = searchBox.value.toLowerCase().trim().normalize("NFKC");
-      
-      // ひらがな版とカタカナ版の両方のキーワードを用意する
-      const keywordHira = toHiragana(rawKeyword);
-      const keywordKata = toKatakana(rawKeyword);
-
-      const selectedGenre = genreFilter.value;
-      const rows = listBody.querySelectorAll('tr');
-
-      rows.forEach(row => {
-        // 新規追加行（一番下の空行）は常に表示する
-        if (row.dataset.index === "-1") {
-          row.style.display = '';
-          return;
-        }
-
-        const genreInput = row.querySelector('.input-genre');
-        const nameInput = row.querySelector('.input-name');
-        const memoInput = row.querySelector('.input-memo');
-
-        // 対象のテキストも比較用に正規化する
-        const genreText = genreInput ? genreInput.value.toLowerCase().normalize("NFKC") : '';
-        const nameText = nameInput ? nameInput.value.toLowerCase().normalize("NFKC") : '';
-        const memoText = memoInput ? memoInput.value.toLowerCase().normalize("NFKC") : '';
-
-        // 1. キーワード検索の判定（ひらがな、またはカタカナのどちらかが含まれているか）
-        const matchesKeyword = !rawKeyword || 
-          // ひらがなでの判定
-          genreText.includes(keywordHira) || nameText.includes(keywordHira) || memoText.includes(keywordHira) ||
-          // カタカナでの判定
-          genreText.includes(keywordKata) || nameText.includes(keywordKata) || memoText.includes(keywordKata);
-
-        // 2. ジャンルフィルターの判定
-        const matchesGenre = !selectedGenre || (genreInput && genreInput.value === selectedGenre);
-
-        // 両方の条件を満たす場合のみ表示、それ以外は非表示
-        if (matchesKeyword && matchesGenre) {
-          row.style.display = '';
-        } else {
-          row.style.display = 'none';
-        }
-      });
-    }
-
-    // イベントを設定（文字が入力されるたび、またはプルダウンが変わるたびに実行）
-    searchBox.addEventListener('input', applyFilter);
-    genreFilter.addEventListener('change', applyFilter);
-
-    // 既存の updateGenreSuggestions 関数を拡張し、フィルター用のプルダウンも自動更新するようにフック
-    const originalUpdateGenreSuggestions = updateGenreSuggestions;
-    updateGenreSuggestions = function() {
-      originalUpdateGenreSuggestions();
-
-      if (!appData.items || !Array.isArray(appData.items)) return;
-      const genres = [...new Set(appData.items.map(item => item.genre).filter(g => g && g.trim() !== ''))];
-      
-      const currentSelected = genreFilter.value;
-      
-      genreFilter.innerHTML = '<option value="">📁 すべてのジャンル</option>' + 
-        genres.map(g => `<option value="${g}">${g}</option>`).join('');
-        
-      genreFilter.value = currentSelected;
-    };
-
-    // アプリ再描画（renderApp）の後に、現在のフィルター状態を強制適用する処理をフック
-    const originalRenderApp = renderApp;
-    renderApp = function() {
-      originalRenderApp();
-      applyFilter(); // 再描画されても検索・絞り込み状態を維持する
-    };
   </script>
 </body>
 </html>
