@@ -1,7 +1,7 @@
 {
   "items": [
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　調味料",
       "name": "ゼラチン",
       "season": "",
@@ -10,7 +10,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　調味料",
       "name": "白コショウ",
       "season": "",
@@ -19,7 +19,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　調味料",
       "name": "黒コショウ",
       "season": "",
@@ -28,7 +28,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　調味料",
       "name": "醤油",
       "season": "",
@@ -37,7 +37,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　調味料",
       "name": "ラカント",
       "season": "",
@@ -46,7 +46,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　調味料",
       "name": "料理酒",
       "season": "",
@@ -161,7 +161,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　野菜以外",
       "name": "えのき",
       "season": "",
@@ -173,6 +173,24 @@
       "checked": false,
       "genre": "食材　野菜以外",
       "name": "豚肉",
+      "season": "",
+      "points": [],
+      "history": [],
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　野菜以外",
+      "name": "鶏肉",
+      "season": "",
+      "points": [],
+      "history": [],
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　野菜以外",
+      "name": "その他肉",
       "season": "",
       "points": [],
       "history": [],
