@@ -55,7 +55,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　調味料",
       "name": "みりん",
       "season": "",
@@ -64,7 +64,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　調味料",
       "name": "米粉",
       "season": "",
@@ -73,7 +73,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　調味料",
       "name": "はちみつ",
       "season": "",
@@ -82,7 +82,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　調味料",
       "name": "レモン汁",
       "season": "",
@@ -144,6 +144,24 @@
     },
     {
       "checked": false,
+      "genre": "食材　野菜",
+      "name": "キムチ",
+      "season": "",
+      "points": [],
+      "history": [],
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　野菜",
+      "name": "バナナ",
+      "season": "",
+      "points": [],
+      "history": [],
+      "memo": ""
+    },
+    {
+      "checked": false,
       "genre": "食材　野菜以外",
       "name": "えのき",
       "season": "",
@@ -161,7 +179,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "日用品",
       "name": "ポリ袋",
       "season": "",
