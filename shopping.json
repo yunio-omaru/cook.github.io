@@ -1,1 +1,28 @@
-A
+{
+  "items": [
+    {
+      "checked": false,
+      "genre": "食材　野菜",
+      "name": "キャベツ",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　野菜",
+      "name": "レタス",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　野菜",
+      "name": "人参",
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "",
+      "name": "トマト",
+      "memo": ""
+    }
+  ]
+}
