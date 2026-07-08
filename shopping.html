@@ -543,14 +543,34 @@
     });
     
     // =================================================================
-    // 🔍 検索・ジャンル絞り込み 追記コード（既存ロジックはいじりません）
+    // 🔍 検索・ジャンル絞り込み 追記コード（かな・カナ曖昧検索対応版）
     // =================================================================
     const searchBox = document.getElementById('searchBox');
     const genreFilter = document.getElementById('genreFilter');
 
+    // ひらがなをカタカナに変換するヘルパー関数
+    function toKatakana(str) {
+      return str.replace(/[\u3041-\u3096]/g, function(match) {
+        return String.fromCharCode(match.charCodeAt(0) + 0x60);
+      });
+    }
+
+    // カタカナをひらがなに変換するヘルパー関数
+    function toHiragana(str) {
+      return str.replace(/[\u30a1-\u30f6]/g, function(match) {
+        return String.fromCharCode(match.charCodeAt(0) - 0x60);
+      });
+    }
+
     // 検索ワード、または選択ジャンルが変わった時に表示を切り替える関数
     function applyFilter() {
-      const keyword = searchBox.value.toLowerCase().trim();
+      // 検索文字を正規化（全角英数を半角にしたり、濁点の結合度を揃える）
+      const rawKeyword = searchBox.value.toLowerCase().trim().normalize("NFKC");
+      
+      // ひらがな版とカタカナ版の両方のキーワードを用意する
+      const keywordHira = toHiragana(rawKeyword);
+      const keywordKata = toKatakana(rawKeyword);
+
       const selectedGenre = genreFilter.value;
       const rows = listBody.querySelectorAll('tr');
 
@@ -565,18 +585,20 @@
         const nameInput = row.querySelector('.input-name');
         const memoInput = row.querySelector('.input-memo');
 
-        const genreText = genreInput ? genreInput.value.toLowerCase() : '';
-        const nameText = nameInput ? nameInput.value.toLowerCase() : '';
-        const memoText = memoInput ? memoInput.value.toLowerCase() : '';
+        // 対象のテキストも比較用に正規化する
+        const genreText = genreInput ? genreInput.value.toLowerCase().normalize("NFKC") : '';
+        const nameText = nameInput ? nameInput.value.toLowerCase().normalize("NFKC") : '';
+        const memoText = memoInput ? memoInput.value.toLowerCase().normalize("NFKC") : '';
 
-        // 1. キーワード検索の判定（ジャンル・名称・備考のどこかに含まれているか）
-        const matchesKeyword = !keyword || 
-          genreText.includes(keyword) || 
-          nameText.includes(keyword) || 
-          memoText.includes(keyword);
+        // 1. キーワード検索の判定（ひらがな、またはカタカナのどちらかが含まれているか）
+        const matchesKeyword = !rawKeyword || 
+          // ひらがなでの判定
+          genreText.includes(keywordHira) || nameText.includes(keywordHira) || memoText.includes(keywordHira) ||
+          // カタカナでの判定
+          genreText.includes(keywordKata) || nameText.includes(keywordKata) || memoText.includes(keywordKata);
 
         // 2. ジャンルフィルターの判定
-        const matchesGenre = !selectedGenre || genreInput.value === selectedGenre;
+        const matchesGenre = !selectedGenre || (genreInput && genreInput.value === selectedGenre);
 
         // 両方の条件を満たす場合のみ表示、それ以外は非表示
         if (matchesKeyword && matchesGenre) {
@@ -594,19 +616,17 @@
     // 既存の updateGenreSuggestions 関数を拡張し、フィルター用のプルダウンも自動更新するようにフック
     const originalUpdateGenreSuggestions = updateGenreSuggestions;
     updateGenreSuggestions = function() {
-      // 元々の処理をそのまま実行
       originalUpdateGenreSuggestions();
 
-      // フィルター用セレクトボックスの中身を現在のジャンル一覧に更新
       if (!appData.items || !Array.isArray(appData.items)) return;
       const genres = [...new Set(appData.items.map(item => item.genre).filter(g => g && g.trim() !== ''))];
       
-      const currentSelected = genreFilter.value; // 現在選んでいるジャンルを記憶
+      const currentSelected = genreFilter.value;
       
       genreFilter.innerHTML = '<option value="">📁 すべてのジャンル</option>' + 
         genres.map(g => `<option value="${g}">${g}</option>`).join('');
         
-      genreFilter.value = currentSelected; // 記憶していた選択状態を復元
+      genreFilter.value = currentSelected;
     };
 
     // アプリ再描画（renderApp）の後に、現在のフィルター状態を強制適用する処理をフック
