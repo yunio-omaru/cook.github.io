@@ -503,7 +503,7 @@
 
       [inputGenre, inputName, inputMemo].forEach(input => {
         input.addEventListener('keydown', (e) => {
-          // 漢字変換確定のEnterでは自動保存を無視。入力終了のEnterでのみ作動
+          // 漢字変換確定のEnterでは自動保存を無視。入力終了のEnterでのみ作動 
           if (e.key === 'Enter' && !e.isComposing) {
             input.blur(); 
           }
