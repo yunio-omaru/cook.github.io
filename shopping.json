@@ -30,15 +30,6 @@
     {
       "checked": true,
       "genre": "食材　調味料",
-      "name": "醤油",
-      "season": "",
-      "points": [],
-      "history": [],
-      "memo": ""
-    },
-    {
-      "checked": true,
-      "genre": "食材　調味料",
       "name": "ラカント",
       "season": "",
       "points": [],
@@ -85,6 +76,24 @@
       "checked": true,
       "genre": "食材　調味料",
       "name": "レモン汁",
+      "season": "",
+      "points": [],
+      "history": [],
+      "memo": ""
+    },
+    {
+      "checked": true,
+      "genre": "食材　調味料",
+      "name": "醤油",
+      "season": "",
+      "points": [],
+      "history": [],
+      "memo": ""
+    },
+    {
+      "checked": false,
+      "genre": "食材　調味料",
+      "name": "味覇",
       "season": "",
       "points": [],
       "history": [],
@@ -161,7 +170,7 @@
       "memo": ""
     },
     {
-      "checked": true,
+      "checked": false,
       "genre": "食材　野菜以外",
       "name": "えのき",
       "season": "",
@@ -188,7 +197,7 @@
       "memo": ""
     },
     {
-      "checked": false,
+      "checked": true,
       "genre": "食材　野菜以外",
       "name": "その他肉",
       "season": "",
